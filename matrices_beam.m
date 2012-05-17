@@ -1,11 +1,36 @@
 function [ Me, Ke ] = matrices_beam( le, alpha, beam_spec )
-%MATRICES_BEAM Return element mass and stiffnes matrices of a beam
-%   Input arguments are:  le        - element length
-%                         alpha     - element rotation angle (rad)
-%                         beam_spec - beam specification containing:
-%                                     [rhoA EA EI]
-%   Output arguments are: Me    - element mass matrix
-%                         Ke    - element stiffness matrix
+%MATRICES_BEAM - Return element mass and stiffnes matrices of a beam
+% This function returns the element mass and stiffness matrices of a
+% truss-beam-element which the frame-structures are composed of.
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% matrices_beam.m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Syntax : [ Me, Ke ] = matrices_beam( le, alpha, beam_spec )
+%
+% Inputs :
+%    le        - element length
+%    alpha     - element rotation angle (rad)
+%    beam_spec - beam specification containing:
+%                 -> rhoA
+%                 -> EA
+%                 -> EI
+%
+% Outputs :
+%    Me - coordinate transformed element mass matrix
+%    Ke - coordinate transformed element stiffness matrix
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Author        : Felix Langfeldt
+%                 felix.langfeldt@haw-hamburg.de
+%
+% Creation Date : 2012-05-17 12:39 CEST
+% Last Modified : 2012-05-17 12:43 CEST
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 % standard shape functions of trusses/beams according to LIU/QUEK 2003

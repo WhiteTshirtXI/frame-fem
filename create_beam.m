@@ -1,15 +1,43 @@
 function [ el, nodes ] = create_beam( xz0, xz1, offset, beam_specs )
-%CREATE_BEAM Creates a beam with specified number of elements (uniformly
-%spaced)
-%   Input arguments:  xz0        - start point coordinate
-%                     xz1        - end point coordinate
-%                     offset     - node index offset
-%                     beam_specs - beam properties vector containing:
-%                                  [Ne rhoA EA EI]
-%   Output arguments: el         - cell array containing Ne rows with:
-%                                  [Me Ke idxVec]
-%                     nodes      - node data matrx containing Ne+1 rows:
-%                                  [n_x n_y]
+%CREATE_BEAM - Create a beam with the specified number of elements
+% This function creates a beam inside the frame structure discretized
+% by the given element number. The truss-beam elements are generally
+% uniformly spaced.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% create_beam.m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Syntax : [ el, nodes ] = create_beam( xz0, xz1, offset, beam_specs )
+%
+% Inputs :
+%    xz0        - start point coordinates
+%    xz1        - end point coordinates
+%    offset     - node index offset
+%    beam_specs - beam specifications containing:
+%                  -> Ne (number of elements)
+%                  -> rhoA
+%                  -> EA
+%                  -> EI		
+%
+% Outputs :
+%    el    - element data matrix containing:
+%             -> element mass matrix
+%             -> element stiffness matrix
+%             -> element index vector
+%    nodes - node coordinates containing:
+%             -> x-coordinate
+%             -> z-coordinate
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Author        : Felix Langfeldt
+%                 felix.langfeldt@haw-hamburg.de
+%
+% Creation Date : 2012-05-17 12:46 CEST
+% Last Modified : 2012-05-17 12:52 CEST
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % calculate beam length and angle
 dxz = xz1 - xz0;

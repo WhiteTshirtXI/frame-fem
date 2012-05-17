@@ -1,11 +1,34 @@
-function [ Msys Ksys ] = build_sys_matrix( elData )
-%BUILD_SYS_MATRIX Build system matrix from element matrices and index
-%vectors
-%   Input parameters:  elData - a cell matrix containing in each row:
-%                               -> element mass matrix
-%                               -> element stiffness matrix
-%                               -> element index vector
-%   Output parameters: Msys   - system matrix
+function [ MSys, KSys ] = build_sys_matrix( elData )
+%BUILD_SYS_MATRIX - Assemble system matrices using element data
+% This function returns the system mass and stiffness matrices using the
+% element data provided as a parameter. The element data vector contains
+% the element matrices and the index vectors.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% build_sys_matrix.m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Syntax : [ MSys, KSys ] = build_sys_matrix( elData )
+%
+% Inputs :
+%    elData - A cell matrix containing in each row:
+%              -> element mass matrix
+%              -> element stiffness matrix
+%              -> element index vector
+%
+% Outputs :
+%    MSys - System mass matrix
+%    KSys - System stiffness matrix
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Author        : Felix Langfeldt
+%                 felix.langfeldt@haw-hamburg.de
+%
+% Creation Date : 2012-05-17 12:28 CEST
+% Last Modified : 2012-05-17 13:07 CEST
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % check if the cell arrays of element matrices and element index vectors
 % are equally sized
@@ -19,8 +42,8 @@ if(numel(Me) == numel(vecIe) && numel(Ke) == numel(vecIe))
     % find out maximum matrix index -> number of nodes
     N = max(cat(2,vecIe{:}));
     
-    Msys = zeros(N);
-    Ksys = Msys;
+    MSys = zeros(N);
+    KSys = MSys;
     
     % run through all elements
     for e = 1:numel(Me)
@@ -34,8 +57,8 @@ if(numel(Me) == numel(vecIe) && numel(Ke) == numel(vecIe))
         % run through element matrix elements
         for i = 1:size(Me_e,1)
             for j = 1:size(Me_e,2)
-                Msys(vecIe_e(i),vecIe_e(j)) = Msys(vecIe_e(i),vecIe_e(j)) + Me_e(i,j);
-                Ksys(vecIe_e(i),vecIe_e(j)) = Ksys(vecIe_e(i),vecIe_e(j)) + Ke_e(i,j);
+                MSys(vecIe_e(i),vecIe_e(j)) = MSys(vecIe_e(i),vecIe_e(j)) + Me_e(i,j);
+                KSys(vecIe_e(i),vecIe_e(j)) = KSys(vecIe_e(i),vecIe_e(j)) + Ke_e(i,j);
             end
         end
         

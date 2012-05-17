@@ -1,9 +1,35 @@
-function plot_mode_shape(nodes_xz, nodes_m_xz, i, f)
-%PLOT_MODE_SHAPE(NODES_XZ, NODES_M_XZ)
-%  NODES_XZ:   matrix of xz-coordinates of undisplaced nodes
-%  NODES_M_XZ: matrix of xz-coordinates of discplaced nodes
-%  I:          mode nr.
-%  F:          mode frequency
+function plot_mode_shape( nodes_xz, nodes_m_xz, i, f )
+%PLOT_MODE_SHAPE - Plots the deformed and undeformed eigenmode-system
+% This function plots the system in the undeformed and deformed state
+% for a specified eigenmode. The deformed node coordinates plus the mode
+% number and the mode eigenfrequency have to be specified.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% plot_mode_shape.m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Syntax : plot_mode_shape( nodes_xz, nodes_m_xz, i, f )
+%
+% Inputs :
+%    nodes_xz   - x- and z-coordinates of the nodes of the undeformed
+%                 system
+%    nodes_m_xz - x- and z-coordinates of the nodes of the deformed
+%                 system
+%    i          - mode number
+%    f          - mode eigenfrequency
+%
+% Outputs :
+%    none
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Author        : Felix Langfeldt
+%                 felix.langfeldt@haw-hamburg.de
+%
+% Creation Date : 2012-05-17 12:57 CEST
+% Last Modified : 2012-05-17 13:01 CEST
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %p = plot(nodes_xz(:,1),nodes_xz(:,2),'--x', ...
 %         nodes_m_xz(:,1),nodes_m_xz(:,2),'-o');
