@@ -17,8 +17,8 @@ function [ MSys, KSys ] = build_sys_matrix( elData )
 %              -> element index vector
 %
 % Outputs :
-%    MSys - System mass matrix
-%    KSys - System stiffness matrix
+%    MSys - System mass matrix (sparse)
+%    KSys - System stiffness matrix (sparse)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -26,7 +26,7 @@ function [ MSys, KSys ] = build_sys_matrix( elData )
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-17 12:28 CEST
-% Last Modified : 2012-05-17 13:07 CEST
+% Last Modified : 2012-05-18 11:20 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -38,12 +38,24 @@ Ke = elData(:,2);
 vecIe = elData(:,3);
 
 if(numel(Me) == numel(vecIe) && numel(Ke) == numel(vecIe))
+
+    % calculate system matrix bandwidth
+    % to do that, we have to find out the maximum index difference of
+    % the index vectors
+    maxDiff = 0;
+    for indexVector = vecIe'
+        delta =	max(indexVector{:}) - min(indexVector{:});
+        maxDiff = max(maxDiff, delta);
+    end
+
+    % max. bandwith equals maxDiff + 1
+    bandWith = maxDiff + 1;  
     
     % find out maximum matrix index -> number of nodes
     N = max(cat(2,vecIe{:}));
     
-    MSys = zeros(N);
-    KSys = MSys;
+    MSys = spalloc(N,N,(2*bandWith+1)*N);
+    KSys = spalloc(N,N,(2*bandWith+1)*N);
     
     % run through all elements
     for e = 1:numel(Me)

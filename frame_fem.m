@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-17 19:11 CEST
+% Last Modified : 2012-05-18 11:28 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -238,7 +238,9 @@ if MODAL_ANALYSIS > 0
     n_subplots_x = ceil(sqrt(MODAL_ANALYSIS));
     n_subplots_y = ceil(MODAL_ANALYSIS/n_subplots_x);
 
-    [eigVec,eigVal] = eig(KSys, -MSys);
+    % WORKAROUND : using full() to convert the sparse system matrices to
+    %              full matrices
+    [eigVec,eigVal] = eig(full(KSys), -full(MSys));
 
     % get eigenfrequencies
     eigOm = imag(sqrt(diag(eigVal)));   % rad/s
@@ -286,10 +288,10 @@ end
 
 %%% TRANSIENT ANALYSIS %%%
 
-% initialize matrices for transient ode-system
+% initialize sparse matrices for transient ode-system
 % -> (2*number of dof)x(2*number of dof)-matrices
-MSys_y = zeros(2*3*n_nodes);
-KSys_y = zeros(2*3*n_nodes);
+MSys_y = sparse(2*3*n_nodes,2*3*n_nodes);
+KSys_y = sparse(2*3*n_nodes,2*3*n_nodes);
 
 
 % the following steps are important for keeping the extended system
@@ -315,7 +317,7 @@ MSys_y(1:2:end,1:2:end) = MSys;
 %                    |  0   0   0   1   0   0 |
 %                    | M31  0  M32  0  M33  0 |
 %                    |  0   0   0   0   0   1 | )
-MSys_y(2:2:end,2:2:end) = eye(3*n_nodes);
+MSys_y(2:2:end,2:2:end) = speye(3*n_nodes);
 
 % assemble extended stiffness matrix in two steps:
 % STEP 1: for every odd row and even column of KSys_y add the
@@ -329,24 +331,21 @@ MSys_y(2:2:end,2:2:end) = eye(3*n_nodes);
 %                    | 0   0   0   0   0   0  | )
 KSys_y(1:2:end,2:2:end) = KSys; 
 
-% STEP 2: fill the even elements of the first lower diagonal with ones
+% STEP 2: fill the even elements of the first lower diagonal with
+%         negative ones
 %         (this finally leads to a matrix of the following structure
 %                    | 0  K11  0  K12  0  K13 |
-%                    | 1   0   0   0   0   0  |
+%                    | -1  0   0   0   0   0  |
 %                    | 0  K21  0  K22  0  K23 |
-%                    | 0   0   1   0   0   0  |
+%                    | 0   0   -1  0   0   0  |
 %                    | 0  K31  0  K32  0  K33 |
-%                    | 0   0   0   0   1   0  | )
-KSys_y(2:2:end,1:2:end) = eye(3*n_nodes);
-
-% make matrices sparse
-MSys_y = sparse(MSys_y);
-KSys_y = sparse(KSys_y);
+%                    | 0   0   0   0   -1  0  | )
+KSys_y(2:2:end,1:2:end) = -speye(3*n_nodes);
 
 
-% initialize force amplitude vector
+% initialize sparse force amplitude vector
 % -> (2*number of dof)-vector
-f_a = zeros(2*3*n_nodes,1);
+f_a = sparse(2*3*n_nodes,1);
 % the first node gets a z-force amplitude
 % position in force vector: 1+6*(node_nr-1)+2*(dof_nr-1)
 f_a(3) = 100.0;
@@ -358,7 +357,7 @@ f_y = @(t) f_a*imag(exp(j*OM*t));
 f_rhs = @(t,y) f_y(t) - KSys_y*y;
 
 % initial values (all zero!)
-y_0 = zeros(2*3*n_nodes,1);
+y_0 = sparse(2*3*n_nodes,1);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
