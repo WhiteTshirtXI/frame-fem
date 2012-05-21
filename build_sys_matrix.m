@@ -26,7 +26,7 @@ function [ MSys, KSys ] = build_sys_matrix( elData )
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-17 12:28 CEST
-% Last Modified : 2012-05-18 11:20 CEST
+% Last Modified : 2012-05-21 09:27 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -66,13 +66,9 @@ if(numel(Me) == numel(vecIe) && numel(Ke) == numel(vecIe))
         % index vector
         vecIe_e = vecIe{e};
         
-        % run through element matrix elements
-        for i = 1:size(Me_e,1)
-            for j = 1:size(Me_e,2)
-                MSys(vecIe_e(i),vecIe_e(j)) = MSys(vecIe_e(i),vecIe_e(j)) + Me_e(i,j);
-                KSys(vecIe_e(i),vecIe_e(j)) = KSys(vecIe_e(i),vecIe_e(j)) + Ke_e(i,j);
-            end
-        end
+        % add element matrices to system matrices
+        MSys(vecIe_e,vecIe_e) = MSys(vecIe_e,vecIe_e) + Me_e;
+        KSys(vecIe_e,vecIe_e) = KSys(vecIe_e,vecIe_e) + Ke_e;
         
     end
         
