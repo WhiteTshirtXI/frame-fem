@@ -27,7 +27,7 @@
 %%% general options %%%
 
 % number of eigenmodes to be analysed after the elementation is done
-MODAL_ANALYSIS = 4;
+MODAL_ANALYSIS = 6;
 
 %%% geometric parameters %%%
 
