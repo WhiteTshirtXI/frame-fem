@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-21 09:25 CEST
+% Last Modified : 2012-05-21 13:10 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -256,52 +256,30 @@ if MODAL_ANALYSIS > 0
     % initialize figure
     fig_modes = figure;
 
-    %number of subplots in x- and y-direction
+    % number of subplots in x- and y-direction
     n_subplots_x = ceil(sqrt(MODAL_ANALYSIS));
     n_subplots_y = ceil(MODAL_ANALYSIS/n_subplots_x);
 
-    % WORKAROUND : using full() to convert the sparse system matrices to
-    %              full matrices
-    [eigVec,eigVal] = eig(full(KSys), -full(MSys));
+    % get eigenmodes
+    [eigVal,eigVec] = sys_fem.getModes(MODAL_ANALYSIS);
 
     % get eigenfrequencies
-    eigOm = imag(sqrt(diag(eigVal)));   % rad/s
-    eigF  = eigOm ./ (2*pi);            % Hz
-
-    % mode nr.
-    mode = 0;
-
-    for i = 1:MODAL_ANALYSIS
-
-        % if number of modes to be analyzed is greater than the actual
-        % number of modes, skip for loop
-        if i > size(eigF)
-            break;
-        end
-        
-        %mode = mode + 1;
-        %eigF_m = eigF(end-mode-1);
-
-        % if the eigenfrequency of the current mode is = 0, skip
-        while 1
-            mode = mode + 1;
-            eigF_m = eigF(end-mode-1);
-            if eigF_m > eps
-                break
-            end
-        end
+    eigOm = imag(sqrt(eigVal));   % rad/s
+    eigF  = eigOm ./ (2*pi);      % Hz
+    
+    % run through all eigenmodes
+    for mode = 1:numel(eigVal)
 
         % get mode shape
-        nodes_m = get_mode_shape(nodes, eigVec(:,end-mode-1));
+        nodes_m = get_mode_shape(nodes, eigVec(:,mode));
 
         % plot mode
-        fig_modes_sub = subplot(n_subplots_y, n_subplots_x, i, ...
+        fig_modes_sub = subplot(n_subplots_y, n_subplots_x, mode, ...
                                 'parent', fig_modes);
-        plot_mode_shape(nodes, nodes_m, i, eigF_m);
+        plot_mode_shape(nodes, nodes_m, mode, eigF(mode));
 
         % info output
-        fprintf('Mode %i : f = %8.2f Hz\n', [i, eigF_m]);
-
+        fprintf('Mode %i : f = %8.2f Hz\n', [mode, eigF(mode)]);
 
     end
 

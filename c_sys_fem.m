@@ -13,23 +13,32 @@ classdef c_sys_fem < handle
 % Class definition
 %
 % Properties :
-%    NDOF     - number of DOFs per node
-%    IDOF_U   - DOF index for x-translation
-%    IDOF_W   - DOF index for z-translation
-%    IDOF_B   - DOF index for rotation around y-axis
+%    NDOF      - number of DOFs per node
+%    IDOF_U    - DOF index for x-translation
+%    IDOF_W    - DOF index for z-translation
+%    IDOF_B    - DOF index for rotation around y-axis
 %
-%    IDOF_VEC - node DOF index vector
+%    IDOF_VEC  - node DOF index vector
 %
-%    N        - number of nodes
-%    nodes    - node list
+%    N         - number of nodes
+%    nodes     - node list
 %
-%    MSys     - system mass matrix
-%    KSys     - systen stiffness matrix
+%    MSys      - system mass matrix
+%    KSys      - systen stiffness matrix
+%
+%    eigVal    - matrix of eigenvalues of the system
+%    eigVec    - matrix of eigenvectors of the system
+%    eigRecalc - recalculation of eigenvalues required
 %
 % Methods :
 %    c_sys_fem   - constructor
 %    sysDOF      - return overall system degrees of freedom
 %    add_element - add beam element
+%    eigCalc     - calculate eigenvalues and eigenvectors
+%    getModes    - return eigenmodes
+%    getAllModes - return all eigenmodes
+%    removeModes - remove eigenmodes with an eigenfrequency below a
+%                  certain tolerance
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -37,7 +46,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-21 09:24 CEST
+% Last Modified : 2012-05-21 13:09 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -68,6 +77,14 @@ classdef c_sys_fem < handle
         % system mass and stiffness matrices
         MSys;
         KSys;
+
+        % eigenvalues and -vectors
+        eigVal;
+        eigVec;
+
+        % recalculation of eigenvalues required
+        eigRecalc = true;
+
     end
 
     % METHODS
@@ -93,6 +110,11 @@ classdef c_sys_fem < handle
             % allocate memory for the system matrices
             self.MSys  = sparse(sysDOF,sysDOF);
             self.KSys  = sparse(sysDOF,sysDOF);
+
+            % allocte memory for the eigenvalue matrices
+            % self.eigVal = spalloc(sysDOF,sysDOF,sysDOF);
+            self.eigVal = zeros(sysDOF);
+            self.eigVec = zeros(sysDOF);
 
         end
 
@@ -161,8 +183,89 @@ classdef c_sys_fem < handle
                                                        idx_dof) + Ke;    
 
             end
-            
+
+            % the system matrices have changed, so a recalculation of the
+            % eigenvalues is required
+            self.eigRecalc = true;
+
         end 
+
+        % CALCULATE EIGENVALUES
+        function self = eigCalc(self)
+
+            % check if eigenvalue recalculation is neccessary
+            if(self.eigRecalc)
+
+                % WORKAROUND : using full() to convert the sparse system
+                %              matrices to full matrices
+                [self.eigVec,self.eigVal] = eig( full(self.KSys), ...
+                                                -full(self.MSys));
+
+                self.eigRecalc = false;
+
+            end
+
+        end
+
+        % RETURN EIGENMODES
+        %
+        % Inputs:
+        %   p_nModes - number of modes to be returned
+        function [lambda,V] = getModes(self, p_nModes)
+
+            % if neccessary, recalc the eigenmodes
+            self.eigCalc();
+
+            % clean up eigenmodes
+            [lambda_c,V_c,nDel] = self.removeModes();
+
+            % the eigenvalues are fetched in the order from lowest value
+            % to highest value. the lowest eigenvalue is located in the
+            % last cell of the eigenvalue-matrix, so the index of the
+            % highest eigenvalue needs to be calculated according to
+            % p_nModes.
+            idx_maxLambda = max(self.sysDOF()-nDel-p_nModes+1, 1);
+
+            % eigenvalues vector
+            lambda = flipud(diag(lambda_c(idx_maxLambda:end, ...
+                                          idx_maxLambda:end)));
+
+            % corresponding eigenvectors
+            V = V_c(:,idx_maxLambda:end);
+
+        end
+
+        % RETURN ALL EIGENMODES
+        function [lambda,V] = getAllModes(self)
+
+            [lambda,V] = self.getModes(self.sysDOF());
+
+        end
+
+        % REMOVE EIGENMODES WITH AN EIGENFREQUENCY BELOW A CERTAIN
+        % TOLERANCE
+        function [lambda,V,nDel] = removeModes(self)
+
+            % minimum frequency
+            OMEGA_MIN = 1*2*pi;
+
+            % calculate eigenfrequencies
+            freq = imag(sqrt(diag(self.eigVal)));
+
+            % create mask vector by checking if the frequencies are
+            % above the speciefied frequency threshold
+            mask = freq > OMEGA_MIN;
+
+            % remove the affected rows and columns using the mask vector
+            lambda = self.eigVal(mask,mask);
+            % in the eigenvector matrix only the affected colors have to
+            % be removed
+            V = self.eigVec(:,mask);
+
+            % number of deleted elements
+            nDel = nnz(~mask);
+
+        end
 
     end
 
