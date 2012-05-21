@@ -39,6 +39,7 @@ classdef c_sys_fem < handle
 %    getAllModes - return all eigenmodes
 %    removeModes - remove eigenmodes with an eigenfrequency below a
 %                  certain tolerance
+%    addNodeBC   - add nodal boundary condition
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -46,7 +47,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-21 13:09 CEST
+% Last Modified : 2012-05-21 16:31 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -74,6 +75,9 @@ classdef c_sys_fem < handle
         % node list (format: [x1 z1 ; x2 z2 ; ...])
         nodes;
 
+        % boundary conditions for each node and nodal DOF
+        bc;
+
         % system mass and stiffness matrices
         MSys;
         KSys;
@@ -97,9 +101,13 @@ classdef c_sys_fem < handle
         function self = c_sys_fem( p_nodes )
 
             self.nodes = p_nodes;
+
             % the number of system nodes equals the number of rows of
             % the array p_nodes
             self.N     = size(p_nodes, 1);
+
+            % initialize all boundary conditions to zero (non-fixed)
+            self.bc = sparse(self.N,self.NDOF);
 
             % overall degrees of freedom
             sysDOF = self.sysDOF();
@@ -111,7 +119,7 @@ classdef c_sys_fem < handle
             self.MSys  = sparse(sysDOF,sysDOF);
             self.KSys  = sparse(sysDOF,sysDOF);
 
-            % allocte memory for the eigenvalue matrices
+            % allocate memory for the eigenvalue matrices
             % self.eigVal = spalloc(sysDOF,sysDOF,sysDOF);
             self.eigVal = zeros(sysDOF);
             self.eigVec = zeros(sysDOF);
@@ -154,6 +162,10 @@ classdef c_sys_fem < handle
                 [ Me, Ke ] = matrices_beam( le, alpha, ...
                                             [p_rhoA p_EA p_EI] );
 
+                % get boundary conditions of both element nodes using
+                % the index vector
+                bc12 = self.bc(idx',:);
+
                 % calculate DOF index vector for matrix summation to
                 % system matrix
                 %
@@ -175,12 +187,26 @@ classdef c_sys_fem < handle
                 %         concatenating all of the matrix' columns
                 idx_dof = m_idx_dof(:);
 
+                % fifth: to account for the boundary conditions in the
+                %        system stiffness matrix, create a mask vector
+                %        by inverting and concatenating the
+                %        node-bc-vector
+                %        (-> 1 means, the nodal dof is free,
+                %         -> 0 means, the nodal dof is clamped and won't
+                %                     be accounted for in the system
+                %                     matrices
+                bc_mask = full(~(bc12(:)));
+
+                % sixth: finally, apply the BC-mask to the index vector
+                idx_dof_mask = idx_dof(bc_mask);
+
                 % using these index vectors, add the element matrices to
                 % the system matrices
-                self.MSys(idx_dof,idx_dof) = self.MSys(idx_dof, ...
-                                                       idx_dof) + Me;    
-                self.KSys(idx_dof,idx_dof) = self.KSys(idx_dof, ...
-                                                       idx_dof) + Ke;    
+                self.MSys(idx_dof,idx_dof) = ... 
+                        self.MSys(idx_dof,idx_dof) + Me;    
+                self.KSys(idx_dof_mask,idx_dof_mask) = ...
+                        self.KSys(idx_dof_mask,idx_dof_mask) ...
+                        + Ke(bc_mask,bc_mask);    
 
             end
 
@@ -264,6 +290,18 @@ classdef c_sys_fem < handle
 
             % number of deleted elements
             nDel = nnz(~mask);
+
+        end
+
+        % ADD NODAL BOUNDARY CONDITION
+        %
+        % Inputs:
+        %   p_i_node - node index the BC is to be applied to
+        %   p_bc     - bcs for each DOF (1 = clamped, 0 = free)
+        %              [bc_u bc_w bc_beta]
+        function self = addNodeBC(self, p_i_node, p_bc)
+
+            self.bc(p_i_node, :) = p_bc;
 
         end
 

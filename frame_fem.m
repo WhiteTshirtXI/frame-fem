@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-21 13:10 CEST
+% Last Modified : 2012-05-21 16:29 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -219,6 +219,9 @@ end
 
 % initialize fem-system class using the node list
 sys_fem = c_sys_fem(nodes);
+
+% TEST: clamp the first node
+sys_fem.addNodeBC(1, [1 1 1]);
 
 % first node index
 idx_n_start = 1;
