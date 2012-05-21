@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-21 13:45 CEST
+% Last Modified : 2012-05-21 17:04 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -101,6 +101,13 @@ for i_nel = NEL
 
     % initialize sys_fem-class using the node vector
     sys_fem = c_sys_fem(nodes);
+
+    % apply boundary conditions
+    % node 1:    all three DOFs = 0
+    sys_fem.addNodeBC(1, [1 1 1]);
+    % last node: only z-direction = 0
+    % WARNING: what if the beam is rotated??
+    sys_fem.addNodeBC(i_nel+1, [0 1 0]);
 
     % add elements and assemble system matrices
     sys_fem.add_element(nodes_el, RHOA, EA, EI);
