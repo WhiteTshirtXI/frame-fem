@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-21 10:42 CEST
+% Last Modified : 2012-05-21 13:45 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,6 +29,10 @@ clc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%% analysis settings %%%
+
+% max. number of eigenmodes
+MAXMODES = 4;
 
 %%% beam properties (materials, geometry, etc.) %%%
 
@@ -47,7 +51,7 @@ ALPHA = 0*pi/180;
 
 % number of finite elements
 % (use multiple values for parameter study)
-NEL = [1:2];
+NEL = [1 2];
 
 
 %%% derived properties %%%
@@ -100,5 +104,37 @@ for i_nel = NEL
 
     % add elements and assemble system matrices
     sys_fem.add_element(nodes_el, RHOA, EA, EI);
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CALCULATIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %%% MODAL ANALYSIS %%%
+    
+    if MAXMODES > 0
+
+        fprintf(['  Performing a modal analysis for the max. %i ' ...
+                    'lowest eigenmodes ...\n'], MAXMODES);
+
+        % get eigenvalues and eigenvectors
+        [eig_val,eig_vec] = sys_fem.getModes(MAXMODES);
+
+        % calculate eigenfrequencies
+        eig_frq = imag(sqrt(eig_val))/(2*pi);
+
+        % write out all eigenfrequencies
+        for m = 1:numel(eig_frq)
+
+            fprintf('  ... mode #%02i : f = %8.2f Hz\n', ...
+                    [m,eig_frq(m)]);
+
+        end
+
+    end
+
+    fprintf('\n');
 
 end
