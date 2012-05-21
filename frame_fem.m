@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-18 11:28 CEST
+% Last Modified : 2012-05-21 09:25 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -180,41 +180,34 @@ main_nodes = [ xn1 zn1 idx_node_1 ;
 % number of nodes equals index of node 6 !
 n_nodes = idx_node_6;
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%% CONSTRUCT ELEMENTS W/ ELEMENT MATRICES AND INDEX VECTORS %%%
-
-% pre-allocate elements cell array
-elements = cell(idx_node_6-1, 3);
-
 % pre-allocate node matrix
 % row structure: [n_x n_z]
 nodes = zeros(n_nodes, 2);
 
-% iteration counter
-i_beam = 1;
+% set coordinates of first node
+nodes(1,:) = [xn1 zn1];
 
-% iterate through all main beams
-for beam = main_beams'
-    
-    % start and end point coordinates
-    xz0 = main_nodes(i_beam,1:2);
-    xz1 = main_nodes(i_beam+1,1:2);
-    
-    % node index offset
-    nOffset = main_nodes(i_beam,3);
+% calculate and store node coordinates
+for i = [2:6]
 
-    % min and max affected global element indices
-    eMin = nOffset;
-    eMax = nOffset+beam(1)-1;
+    first_node = main_nodes(i-1,:);
+    last_node  = main_nodes(i,:);
 
-    % create elements and nodes
-    [elements(eMin:eMax,:), ...
-     nodes(eMin:eMax+1,:)]     = create_beam(xz0, xz1, nOffset, beam);
+    % vector between both nodes
+    dxz_beam = last_node(1:2)-first_node(1:2);
 
-    i_beam = i_beam + 1;
+    % number of nodes between start and end nodes
+    d_nodes = last_node(3)-first_node(3);
+
+    % delta x and delta z for each sub-node
+    dxz_delta = dxz_beam / d_nodes;
+
+    for n = [1:d_nodes]
+
+        % calculate coordinates
+        nodes(first_node(3)+n,:) = first_node(1:2) + n*dxz_delta;
+
+    end
 
 end
 
@@ -224,8 +217,37 @@ end
 
 %%% ASSEMBLE SYSTEM MATRICES %%%
 
-[MSys, KSys] = build_sys_matrix(elements);
+% initialize fem-system class using the node list
+sys_fem = c_sys_fem(nodes);
 
+% first node index
+idx_n_start = 1;
+
+% run through all beams of the frame structure
+for beam = main_beams'
+
+    % end node index
+    idx_n_end = idx_n_start + beam(1);
+
+    % assemble start node index list for all the beam elements
+    list_n_start = [ idx_n_start:idx_n_end-1 ]';
+
+    % beam material and geometrical properties
+    beam_rhoA = beam(2);
+    beam_EA = beam(3);
+    beam_EI = beam(4);
+    
+    % add elements to the fem-system
+    sys_fem.add_element([list_n_start list_n_start+1], beam_rhoA, ...
+                                                       beam_EA, ...
+                                                       beam_EI);
+
+    idx_n_start = idx_n_end;
+
+end
+
+MSys = sys_fem.MSys;
+KSys = sys_fem.KSys;
 
 %%% CALCULATE EIGENVALUES AND EIGENVECTORS %%%
 
