@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-21 16:29 CEST
+% Last Modified : 2012-05-23 08:46 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -221,7 +221,9 @@ end
 sys_fem = c_sys_fem(nodes);
 
 % TEST: clamp the first node
-sys_fem.addNodeBC(1, [1 1 1]);
+%sys_fem.addNodeBC(1, [1 1 1]);
+% TEST: clamp the last node
+%sys_fem.addNodeBC(idx_node_6, [1 1 1]);
 
 % first node index
 idx_n_start = 1;
