@@ -34,7 +34,11 @@ classdef c_sys_fem < handle
 %    c_sys_fem   - constructor
 %    sysDOF      - return overall system degrees of freedom
 %    add_element - add beam element
+%
 %    eigCalc     - calculate eigenvalues and eigenvectors
+%    eigOmega    - calculate the angular eigenfrequencies
+%    eigF        - calculate the eigenfrequencies
+%
 %    getModes    - return eigenmodes
 %    getAllModes - return all eigenmodes
 %    removeModes - remove eigenmodes with an eigenfrequency below a
@@ -47,7 +51,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-23 13:58 CEST
+% Last Modified : 2012-05-23 14:43 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -230,6 +234,24 @@ classdef c_sys_fem < handle
                 self.eigRecalc = false;
 
             end
+
+        end
+
+        % CALCULATE ANGULAR EIGENFREQUENCIES
+        function omega = eigOmega(self)
+
+            % recalculate eigenvalues, if neccessary
+            self.eigCalc();
+
+            % return vector of angular eigenfrequencies
+            omega = imag(sqrt(diag(self.eigVal)));
+
+        end
+
+        % CALCULATE EIGENFREQUENCIES
+        function f = eigF(self)
+
+            f = self.eigOmega()./(2*pi);
 
         end
 
