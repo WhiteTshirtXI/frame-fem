@@ -47,7 +47,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-21 16:31 CEST
+% Last Modified : 2012-05-23 13:58 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -257,7 +257,7 @@ classdef c_sys_fem < handle
                                           idx_maxLambda:end)));
 
             % corresponding eigenvectors
-            V = V_c(:,idx_maxLambda:end);
+            V = fliplr(V_c(:,idx_maxLambda:end));
 
         end
 
