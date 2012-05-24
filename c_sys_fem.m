@@ -13,22 +13,24 @@ classdef c_sys_fem < handle
 % Class definition
 %
 % Properties :
-%    NDOF      - number of DOFs per node
-%    IDOF_U    - DOF index for x-translation
-%    IDOF_W    - DOF index for z-translation
-%    IDOF_B    - DOF index for rotation around y-axis
+%    NDOF       - number of DOFs per node
+%    IDOF_U     - DOF index for x-translation
+%    IDOF_W     - DOF index for z-translation
+%    IDOF_B     - DOF index for rotation around y-axis
 %
-%    IDOF_VEC  - node DOF index vector
+%    IDOF_VEC   - node DOF index vector
 %
-%    N         - number of nodes
-%    nodes     - node list
+%    N          - number of nodes
+%    nodes      - node list
 %
-%    MSys      - system mass matrix
-%    KSys      - systen stiffness matrix
+%    MSys       - system mass matrix
+%    KSys       - systen stiffness matrix
 %
-%    eigVal    - matrix of eigenvalues of the system
-%    eigVec    - matrix of eigenvectors of the system
-%    eigRecalc - recalculation of eigenvalues required
+%    eigVal     - matrix of eigenvalues of the system
+%    eigVec     - matrix of eigenvectors of the system
+%    eigRecalc  - recalculation of eigenvalues required
+%
+%    plot_nodes - nodes plotting class
 %
 % Methods :
 %    c_sys_fem   - constructor
@@ -51,7 +53,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-23 14:43 CEST
+% Last Modified : 2012-05-24 15:36 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -93,6 +95,9 @@ classdef c_sys_fem < handle
         % recalculation of eigenvalues required
         eigRecalc = true;
 
+        % nodes plotting class
+        plot_nodes;
+
     end
 
     % METHODS
@@ -127,6 +132,9 @@ classdef c_sys_fem < handle
             % self.eigVal = spalloc(sysDOF,sysDOF,sysDOF);
             self.eigVal = zeros(sysDOF);
             self.eigVec = zeros(sysDOF);
+
+            % create plot nodes class
+            self.plot_nodes = c_plot_nodes(p_nodes);
 
         end
 
@@ -312,6 +320,39 @@ classdef c_sys_fem < handle
 
             % number of deleted elements
             nDel = nnz(~mask);
+
+        end
+
+        % PLOT EIGENMODES
+        %
+        % Inputs:
+        %   p_nModes - number of modes to be plotted
+        function self = plotModes(self, p_nModes)
+
+            % if neccessary, recalc the eigenmodes
+            self.eigCalc();
+
+            % get modes
+            [lambda, V] = self.getModes(p_nModes);
+
+            % number of acquired modes equals number of columns in V
+            nModes = size(V, 2);
+
+            % allocate nodal displacement matrix with Nx(2*nModes)
+            % cells
+            nodeDisplacements = zeros(self.N, 2*nModes);
+
+            % assemble nodal displacement matrix
+            % first: insert all x-displacements in the eigenvector to
+            %        every odd column of the nodal displacement matrix
+            nodeDisplacements(:,1:2:end) = V(1:self.NDOF:end,:);
+
+            % second: insert all z-displacements in the eigenvector to
+            %         every even column of the nodal displacement matrix
+            nodeDisplacements(:,2:2:end) = V(2:self.NDOF:end,:);
+
+            % call the plotDisplaced-method of the plot_nodes-class
+            self.plot_nodes.plotDisplaced(self.nodes, nodeDisplacements);
 
         end
 

@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-23 08:46 CEST
+% Last Modified : 2012-05-24 15:53 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -258,35 +258,7 @@ KSys = sys_fem.KSys;
 
 if MODAL_ANALYSIS > 0
 
-    % initialize figure
-    fig_modes = figure;
-
-    % number of subplots in x- and y-direction
-    n_subplots_x = ceil(sqrt(MODAL_ANALYSIS));
-    n_subplots_y = ceil(MODAL_ANALYSIS/n_subplots_x);
-
-    % get eigenmodes
-    [eigVal,eigVec] = sys_fem.getModes(MODAL_ANALYSIS);
-
-    % get eigenfrequencies
-    eigOm = imag(sqrt(eigVal));   % rad/s
-    eigF  = eigOm ./ (2*pi);      % Hz
-    
-    % run through all eigenmodes
-    for mode = 1:numel(eigVal)
-
-        % get mode shape
-        nodes_m = get_mode_shape(nodes, eigVec(:,mode));
-
-        % plot mode
-        fig_modes_sub = subplot(n_subplots_y, n_subplots_x, mode, ...
-                                'parent', fig_modes);
-        plot_mode_shape(nodes, nodes_m, mode, eigF(mode));
-
-        % info output
-        fprintf('Mode %i : f = %8.2f Hz\n', [mode, eigF(mode)]);
-
-    end
+    sys_fem.plotModes(MODAL_ANALYSIS);
 
 end
 
@@ -371,4 +343,3 @@ y_0 = sparse(2*3*n_nodes,1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%plot_nodes(nodes);
