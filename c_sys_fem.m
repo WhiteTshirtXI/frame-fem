@@ -33,19 +33,21 @@ classdef c_sys_fem < handle
 %    plot_nodes - nodes plotting class
 %
 % Methods :
-%    c_sys_fem   - constructor
-%    sysDOF      - return overall system degrees of freedom
-%    add_element - add beam element
+%    c_sys_fem      - constructor
+%    sysDOF         - return overall system degrees of freedom
+%    add_element    - add beam element
 %
-%    eigCalc     - calculate eigenvalues and eigenvectors
-%    eigOmega    - calculate the angular eigenfrequencies
-%    eigF        - calculate the eigenfrequencies
+%    eigCalc        - calculate eigenvalues and eigenvectors
+%    eigOmega       - calculate the angular eigenfrequencies
+%    eigF           - calculate the eigenfrequencies
 %
-%    getModes    - return eigenmodes
-%    getAllModes - return all eigenmodes
-%    removeModes - remove eigenmodes with an eigenfrequency below a
-%                  certain tolerance
-%    addNodeBC   - add nodal boundary condition
+%    getModes       - return eigenmodes
+%    getAllModes    - return all eigenmodes
+%    removeModes    - remove eigenmodes with an eigenfrequency below a
+%                     certain tolerance
+%    addNodeBC      - add nodal boundary condition
+%    nodeBC_clamped - clamped nodal BC (all three DOFs fixed)
+%    nodeBC_jointed - jointed nodal BC (rotational DOF free)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -53,7 +55,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-24 15:36 CEST
+% Last Modified : 2012-05-25 10:42 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -365,6 +367,26 @@ classdef c_sys_fem < handle
         function self = addNodeBC(self, p_i_node, p_bc)
 
             self.bc(p_i_node, :) = p_bc;
+
+        end
+
+        % CLAMPED NODAL BC (ALL 3 DOFS FIXED)
+        %
+        % Inputs:
+        %   p_i_node - node index the BC is to be applied to
+        function self = nodeBC_clamped(self, p_i_node)
+
+            self.addNodeBC(p_i_node, [1 1 1]);
+
+        end
+
+        % JOINTED NODAL BC (ROTATIONAL DOF FREE)
+        %
+        % Inputs:
+        %   p_i_node - node index the BC is to be applied to
+        function self = nodeBC_jointed(self, p_i_node)
+
+            self.addNodeBC(p_i_node, [1 1 0]);
 
         end
 
