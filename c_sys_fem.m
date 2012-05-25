@@ -36,6 +36,7 @@ classdef c_sys_fem < handle
 %    c_sys_fem      - constructor
 %    sysDOF         - return overall system degrees of freedom
 %    add_element    - add beam element
+%    add_elements   - add multiple beam elements
 %
 %    eigCalc        - calculate eigenvalues and eigenvectors
 %    eigOmega       - calculate the angular eigenfrequencies
@@ -55,7 +56,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-25 15:52 CEST
+% Last Modified : 2012-05-25 16:04 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -217,6 +218,22 @@ classdef c_sys_fem < handle
             self.eigRecalc = true;
 
         end 
+
+        % ADD MULTIPLE BEAM ELEMENTS
+        %
+        % Inputs:
+        %   p_beams - cell-array containing all the data necessary for
+        %             the addition of every beam element to the system
+        %             { [idx1 idx2] [rhoA EA EI] }
+        function self = add_elements(self, p_beams)
+            
+            for beam = p_beams'
+
+                self.add_element(beam{1},beam{2});
+
+            end
+
+        end
 
         % CALCULATE EIGENVALUES
         function self = eigCalc(self)

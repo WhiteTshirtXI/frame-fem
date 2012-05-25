@@ -36,7 +36,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-25 15:56 CEST
+% Last Modified : 2012-05-25 16:05 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -206,10 +206,8 @@ classdef c_frame_def < handle
             % initialize fem-system class using the node list
             sys_fem = c_sys_fem(sys_nodes);
 
-            % subsequently add all beam elements to the fem system
-            for el = sys_elements'
-                sys_fem.add_element(el{1},el{2});
-            end
+            % add all beam elements to the fem system
+            sys_fem.add_elements(sys_elements);
 
         end
     end
