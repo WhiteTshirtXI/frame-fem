@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-25 15:53 CEST
+% Last Modified : 2012-05-25 16:06 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -130,14 +130,6 @@ EI2 = EI_FRAME;
 EI3 = EI_BOLT;
 EI4 = EI2;
 EI5 = EI1;
-
-           
-% beam properties vector
-main_beams = [ nel1 rhoA1 EA1 EI1 ;
-               nel2 rhoA2 EA2 EI2 ;
-               nel3 rhoA3 EA3 EI3 ;
-               nel4 rhoA4 EA4 EI4 ;
-               nel5 rhoA5 EA5 EI5 ];
 
 
 %%% MAIN NODES %%%
