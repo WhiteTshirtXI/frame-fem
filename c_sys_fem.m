@@ -57,7 +57,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-25 16:22 CEST
+% Last Modified : 2012-05-25 16:35 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -226,9 +226,7 @@ classdef c_sys_fem < handle
 
             % add entries to adjacancy matrix according to the node
             % indices
-            self.nAdj(p_idx(1),p_idx(2)) = self.nAdj(p_idx(1), ... 
-                                                     p_idx(2)) + 1;
-            self.nAdj(p_idx(2),p_idx(1)) = self.nAdj(p_idx(1),p_idx(2));
+            self.nAdj(p_idx,p_idx) = ~eye(2);
 
         end 
 
