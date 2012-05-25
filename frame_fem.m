@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-21 16:29 CEST
+% Last Modified : 2012-05-25 17:16 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -131,14 +131,6 @@ EI3 = EI_BOLT;
 EI4 = EI2;
 EI5 = EI1;
 
-           
-% beam properties vector
-main_beams = [ nel1 rhoA1 EA1 EI1 ;
-               nel2 rhoA2 EA2 EI2 ;
-               nel3 rhoA3 EA3 EI3 ;
-               nel4 rhoA4 EA4 EI4 ;
-               nel5 rhoA5 EA5 EI5 ];
-
 
 %%% MAIN NODES %%%
 
@@ -161,93 +153,50 @@ zn5 = zn2;
 xn6 = xn5 + L;
 zn6 = zn5;
 
-% calculations of main node indices
-idx_node_1 = 1;                 % node 1
-idx_node_2 = idx_node_1+nel1;   % node 2
-idx_node_3 = idx_node_2+nel2;   % node 3
-idx_node_4 = idx_node_3+nel3;   % node 4
-idx_node_5 = idx_node_4+nel4;   % node 5
-idx_node_6 = idx_node_5+nel5;   % node 6
+% frame nodes coordinate vector
+frame_nodes = [ xn1 zn1 ;
+                xn2 zn2 ;
+                xn3 zn3 ;
+                xn4 zn4 ;
+                xn5 zn5 ;
+                xn6 zn6 ];
 
-% main node vector
-main_nodes = [ xn1 zn1 idx_node_1 ;
-               xn2 zn2 idx_node_2 ;
-               xn3 zn3 idx_node_3 ;
-               xn4 zn4 idx_node_4 ;
-               xn5 zn5 idx_node_5 ;
-               xn6 zn6 idx_node_6 ];
+% frame beams specification vector
+frame_beams = [ 1 2 rhoA1 EA1 EI1 nel1 ;
+                2 3 rhoA2 EA2 EI2 nel2 ;
+                3 4 rhoA3 EA3 EI3 nel3 ;
+                4 5 rhoA4 EA4 EI4 nel4 ;
+                5 6 rhoA5 EA5 EI5 nel5 ];
 
-% number of nodes equals index of node 6 !
-n_nodes = idx_node_6;
 
-% pre-allocate node matrix
-% row structure: [n_x n_z]
-nodes = zeros(n_nodes, 2);
+%%% BOUNDARY CONDITIONS %%%
+% clamped nodes 
+nodes_clamped = [ ];
+% jointed nodes
+nodes_jointed = [ ];
 
-% set coordinates of first node
-nodes(1,:) = [xn1 zn1];
 
-% calculate and store node coordinates
-for i = [2:6]
+% create frame-class
+frame = c_frame_def(frame_nodes);
 
-    first_node = main_nodes(i-1,:);
-    last_node  = main_nodes(i,:);
+% add beams
+frame.addBeam(frame_beams);
 
-    % vector between both nodes
-    dxz_beam = last_node(1:2)-first_node(1:2);
+% apply boundary conditions
+frame.nodeBC_clamped(nodes_clamped);
+frame.nodeBC_jointed(nodes_jointed);
 
-    % number of nodes between start and end nodes
-    d_nodes = last_node(3)-first_node(3);
+% discretize the system
+sys_fem = frame.discretize();
 
-    % delta x and delta z for each sub-node
-    dxz_delta = dxz_beam / d_nodes;
-
-    for n = [1:d_nodes]
-
-        % calculate coordinates
-        nodes(first_node(3)+n,:) = first_node(1:2) + n*dxz_delta;
-
-    end
-
-end
+% number of nodes 
+n_nodes = sys_fem.N;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%% ASSEMBLE SYSTEM MATRICES %%%
-
-% initialize fem-system class using the node list
-sys_fem = c_sys_fem(nodes);
-
-% TEST: clamp the first node
-sys_fem.addNodeBC(1, [1 1 1]);
-
-% first node index
-idx_n_start = 1;
-
-% run through all beams of the frame structure
-for beam = main_beams'
-
-    % end node index
-    idx_n_end = idx_n_start + beam(1);
-
-    % assemble start node index list for all the beam elements
-    list_n_start = [ idx_n_start:idx_n_end-1 ]';
-
-    % beam material and geometrical properties
-    beam_rhoA = beam(2);
-    beam_EA = beam(3);
-    beam_EI = beam(4);
-    
-    % add elements to the fem-system
-    sys_fem.add_element([list_n_start list_n_start+1], beam_rhoA, ...
-                                                       beam_EA, ...
-                                                       beam_EI);
-
-    idx_n_start = idx_n_end;
-
-end
 
 MSys = sys_fem.MSys;
 KSys = sys_fem.KSys;
@@ -256,35 +205,7 @@ KSys = sys_fem.KSys;
 
 if MODAL_ANALYSIS > 0
 
-    % initialize figure
-    fig_modes = figure;
-
-    % number of subplots in x- and y-direction
-    n_subplots_x = ceil(sqrt(MODAL_ANALYSIS));
-    n_subplots_y = ceil(MODAL_ANALYSIS/n_subplots_x);
-
-    % get eigenmodes
-    [eigVal,eigVec] = sys_fem.getModes(MODAL_ANALYSIS);
-
-    % get eigenfrequencies
-    eigOm = imag(sqrt(eigVal));   % rad/s
-    eigF  = eigOm ./ (2*pi);      % Hz
-    
-    % run through all eigenmodes
-    for mode = 1:numel(eigVal)
-
-        % get mode shape
-        nodes_m = get_mode_shape(nodes, eigVec(:,mode));
-
-        % plot mode
-        fig_modes_sub = subplot(n_subplots_y, n_subplots_x, mode, ...
-                                'parent', fig_modes);
-        plot_mode_shape(nodes, nodes_m, mode, eigF(mode));
-
-        % info output
-        fprintf('Mode %i : f = %8.2f Hz\n', [mode, eigF(mode)]);
-
-    end
+    sys_fem.plotModes(MODAL_ANALYSIS);
 
 end
 
@@ -369,4 +290,3 @@ y_0 = sparse(2*3*n_nodes,1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%plot_nodes(nodes);

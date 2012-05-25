@@ -13,33 +13,43 @@ classdef c_sys_fem < handle
 % Class definition
 %
 % Properties :
-%    NDOF      - number of DOFs per node
-%    IDOF_U    - DOF index for x-translation
-%    IDOF_W    - DOF index for z-translation
-%    IDOF_B    - DOF index for rotation around y-axis
+%    NDOF       - number of DOFs per node
+%    IDOF_U     - DOF index for x-translation
+%    IDOF_W     - DOF index for z-translation
+%    IDOF_B     - DOF index for rotation around y-axis
 %
-%    IDOF_VEC  - node DOF index vector
+%    IDOF_VEC   - node DOF index vector
 %
-%    N         - number of nodes
-%    nodes     - node list
+%    N          - number of nodes
+%    nodes      - node list
+%    nAdj       - nodes adjacancy matrix
 %
-%    MSys      - system mass matrix
-%    KSys      - systen stiffness matrix
+%    MSys       - system mass matrix
+%    KSys       - systen stiffness matrix
 %
-%    eigVal    - matrix of eigenvalues of the system
-%    eigVec    - matrix of eigenvectors of the system
-%    eigRecalc - recalculation of eigenvalues required
+%    eigVal     - matrix of eigenvalues of the system
+%    eigVec     - matrix of eigenvectors of the system
+%    eigRecalc  - recalculation of eigenvalues required
+%
+%    plot_nodes - nodes plotting class
 %
 % Methods :
-%    c_sys_fem   - constructor
-%    sysDOF      - return overall system degrees of freedom
-%    add_element - add beam element
-%    eigCalc     - calculate eigenvalues and eigenvectors
-%    getModes    - return eigenmodes
-%    getAllModes - return all eigenmodes
-%    removeModes - remove eigenmodes with an eigenfrequency below a
-%                  certain tolerance
-%    addNodeBC   - add nodal boundary condition
+%    c_sys_fem      - constructor
+%    sysDOF         - return overall system degrees of freedom
+%    add_element    - add beam element
+%    add_elements   - add multiple beam elements
+%
+%    eigCalc        - calculate eigenvalues and eigenvectors
+%    eigOmega       - calculate the angular eigenfrequencies
+%    eigF           - calculate the eigenfrequencies
+%
+%    getModes       - return eigenmodes
+%    getAllModes    - return all eigenmodes
+%    removeModes    - remove eigenmodes with an eigenfrequency below a
+%                     certain tolerance
+%    addNodeBC      - add nodal boundary condition
+%    nodeBC_clamped - clamped nodal BC (all three DOFs fixed)
+%    nodeBC_jointed - jointed nodal BC (rotational DOF free)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -47,7 +57,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-21 16:31 CEST
+% Last Modified : 2012-05-25 16:35 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -75,6 +85,9 @@ classdef c_sys_fem < handle
         % node list (format: [x1 z1 ; x2 z2 ; ...])
         nodes;
 
+        % nodes adjacancy matrix
+        nAdj;
+
         % boundary conditions for each node and nodal DOF
         bc;
 
@@ -88,6 +101,9 @@ classdef c_sys_fem < handle
 
         % recalculation of eigenvalues required
         eigRecalc = true;
+
+        % nodes plotting class
+        plot_nodes;
 
     end
 
@@ -105,6 +121,9 @@ classdef c_sys_fem < handle
             % the number of system nodes equals the number of rows of
             % the array p_nodes
             self.N     = size(p_nodes, 1);
+
+            % allocate memory for the adjacancy matrix
+            self.nAdj = sparse(self.N,self.N);
 
             % initialize all boundary conditions to zero (non-fixed)
             self.bc = sparse(self.N,self.NDOF);
@@ -124,6 +143,9 @@ classdef c_sys_fem < handle
             self.eigVal = zeros(sysDOF);
             self.eigVec = zeros(sysDOF);
 
+            % create plot nodes class
+            self.plot_nodes = c_plot_nodes(p_nodes);
+
         end
 
         % RETURN OVERALL SYSTEM DEGREES OF FREEDOM
@@ -136,85 +158,93 @@ classdef c_sys_fem < handle
         % ADD BEAM ELEMENT
         %
         % Inputs:
-        %   p_idx  - index vector matrix for local/global
-        %          - node-assigmnent [ idx1_el1 idx2_el1 ;
-        %                              idx1_el2 idx2_el2 ; ... etc.
-        %   p_rhoA - element line density
-        %   p_EA   - element tensile rigidity
-        %   p_EI   - element bending rigidity
-        function self = add_element(self, p_idx, p_rhoA, p_EA, p_EI)
+        %   p_idx   - node indices [idx1 idx2]
+        %   p_bProp - element properties [rhoA EA EI]
+        function self = add_element(self, p_idx, p_bProp)
 
-            % run through the rows of p_idx
-            for idx = p_idx'
+            % get x- and z-coordinates of both element nodes using the
+            % index vector
+            xz12 = self.nodes(p_idx,:);
 
-                % get x- and z-coordinates of both element nodes using
-                % the index vector
-                xz12 = self.nodes(idx',:);
+            % resulting vector between both nodes
+            dxz12 = xz12(2,:) - xz12(1,:);
 
-                % resulting vector between both nodes
-                dxz12 = xz12(2,:) - xz12(1,:);
+            % calculate element length and angle
+            le    = norm(dxz12);
+            alpha = -atan2(dxz12(2), dxz12(1));
 
-                % calculate element length and angle
-                le    = norm(dxz12);
-                alpha = -atan2(dxz12(2), dxz12(1));
+            % calculate element matrices
+            [ Me, Ke ] = matrices_beam( le, alpha, p_bProp );
 
-                % calculate element matrices
-                [ Me, Ke ] = matrices_beam( le, alpha, ...
-                                            [p_rhoA p_EA p_EI] );
+            % get boundary conditions of both element nodes using the
+            % index vector
+            bc12 = self.bc(p_idx,:);
 
-                % get boundary conditions of both element nodes using
-                % the index vector
-                bc12 = self.bc(idx',:);
+            % calculate DOF index vector for matrix summation to system
+            % matrix
+            %
+            % first: multiply the element node index vector by NDOF and
+            %        substract (NDOF-1) to get the index vector in terms
+            %        of global DOF indices
+            g_idx_dof = self.NDOF*p_idx'-(self.NDOF-1);
+            
+            % second: expand the node DOF index column vector p_idx_dof
+            %         to get a matrix with NDOF columns and two (number
+            %         of element nodes) rows
+            m_idx_dof = repmat(g_idx_dof, 1, self.NDOF);
 
-                % calculate DOF index vector for matrix summation to
-                % system matrix
-                %
-                % first: multiply the element node index vector by NDOF
-                %        and substract (NDOF-1) to get the index vector
-                %        in terms of global DOF indices
-                g_idx_dof = self.NDOF*idx'-(self.NDOF-1);
-                
-                % second: expand the node DOF index column vector
-                %         p_idx_dof to get a matrix with NDOF columns
-                %         and two (number of element nodes) rows
-                m_idx_dof = repmat(g_idx_dof', 1, self.NDOF);
+            % third: expand the local DOF index vector IDOF_VEC-1 in the
+            %        same way and sum up both matrices
+            m_idx_dof = m_idx_dof + repmat(self.IDOF_VEC-1, 2, 1);
 
-                % third: expand the local DOF index vector IDOF_VEC-1 in
-                %        the same way and sum up both matrices
-                m_idx_dof = m_idx_dof + repmat(self.IDOF_VEC-1, 2, 1);
+            % fourth: the final dof index vector is generated by
+            %         concatenating all of the matrix' columns
+            idx_dof = m_idx_dof(:);
 
-                % fourth: the final dof index vector is generated by
-                %         concatenating all of the matrix' columns
-                idx_dof = m_idx_dof(:);
+            % fifth: to account for the boundary conditions in the
+            %        system stiffness matrix, create a mask vector by
+            %        inverting and concatenating the node-bc-vector
+            %        (-> 1 means, the nodal dof is free,
+            %         -> 0 means, the nodal dof is clamped and won't be
+            %            accounted for in the system matrices)
+            bc_mask = full(~(bc12(:)));
 
-                % fifth: to account for the boundary conditions in the
-                %        system stiffness matrix, create a mask vector
-                %        by inverting and concatenating the
-                %        node-bc-vector
-                %        (-> 1 means, the nodal dof is free,
-                %         -> 0 means, the nodal dof is clamped and won't
-                %                     be accounted for in the system
-                %                     matrices
-                bc_mask = full(~(bc12(:)));
+            % sixth: finally, apply the BC-mask to the index vector
+            idx_dof_mask = idx_dof(bc_mask);
 
-                % sixth: finally, apply the BC-mask to the index vector
-                idx_dof_mask = idx_dof(bc_mask);
+            % using these index vectors, add the element matrices to the
+            % system matrices
+            self.MSys(idx_dof,idx_dof) = self.MSys(idx_dof,idx_dof) + Me;    
+            self.KSys(idx_dof_mask,idx_dof_mask) = ...
+                    self.KSys(idx_dof_mask,idx_dof_mask) ...
+                    + Ke(bc_mask,bc_mask);    
 
-                % using these index vectors, add the element matrices to
-                % the system matrices
-                self.MSys(idx_dof,idx_dof) = ... 
-                        self.MSys(idx_dof,idx_dof) + Me;    
-                self.KSys(idx_dof_mask,idx_dof_mask) = ...
-                        self.KSys(idx_dof_mask,idx_dof_mask) ...
-                        + Ke(bc_mask,bc_mask);    
+
+            % the system matrices have changed, so a recalculation of
+            % the eigenvalues is required
+            self.eigRecalc = true;
+
+            % add entries to adjacancy matrix according to the node
+            % indices
+            self.nAdj(p_idx,p_idx) = ~eye(2);
+
+        end 
+
+        % ADD MULTIPLE BEAM ELEMENTS
+        %
+        % Inputs:
+        %   p_beams - cell-array containing all the data necessary for
+        %             the addition of every beam element to the system
+        %             { [idx1 idx2] [rhoA EA EI] }
+        function self = add_elements(self, p_beams)
+            
+            for beam = p_beams'
+
+                self.add_element(beam{1},beam{2});
 
             end
 
-            % the system matrices have changed, so a recalculation of the
-            % eigenvalues is required
-            self.eigRecalc = true;
-
-        end 
+        end
 
         % CALCULATE EIGENVALUES
         function self = eigCalc(self)
@@ -230,6 +260,24 @@ classdef c_sys_fem < handle
                 self.eigRecalc = false;
 
             end
+
+        end
+
+        % CALCULATE ANGULAR EIGENFREQUENCIES
+        function omega = eigOmega(self)
+
+            % recalculate eigenvalues, if neccessary
+            self.eigCalc();
+
+            % return vector of angular eigenfrequencies
+            omega = imag(sqrt(diag(self.eigVal)));
+
+        end
+
+        % CALCULATE EIGENFREQUENCIES
+        function f = eigF(self)
+
+            f = self.eigOmega()./(2*pi);
 
         end
 
@@ -257,7 +305,7 @@ classdef c_sys_fem < handle
                                           idx_maxLambda:end)));
 
             % corresponding eigenvectors
-            V = V_c(:,idx_maxLambda:end);
+            V = fliplr(V_c(:,idx_maxLambda:end));
 
         end
 
@@ -293,6 +341,41 @@ classdef c_sys_fem < handle
 
         end
 
+        % PLOT EIGENMODES
+        %
+        % Inputs:
+        %   p_nModes - number of modes to be plotted
+        function self = plotModes(self, p_nModes)
+
+            % if neccessary, recalc the eigenmodes
+            self.eigCalc();
+
+            % get modes
+            [lambda, V] = self.getModes(p_nModes);
+
+            % number of acquired modes equals number of columns in V
+            nModes = size(V, 2);
+
+            % allocate nodal displacement matrix with Nx(2*nModes)
+            % cells
+            nodeDisplacements = zeros(self.N, 2*nModes);
+
+            % assemble nodal displacement matrix
+            % first: insert all x-displacements in the eigenvector to
+            %        every odd column of the nodal displacement matrix
+            nodeDisplacements(:,1:2:end) = V(1:self.NDOF:end,:);
+
+            % second: insert all z-displacements in the eigenvector to
+            %         every even column of the nodal displacement matrix
+            nodeDisplacements(:,2:2:end) = V(2:self.NDOF:end,:);
+
+            % call the plotDisplaced-method of the plot_nodes-class
+            self.plot_nodes.plotDisplaced(self.nodes, ...
+                                          nodeDisplacements, ...
+                                          self.nAdj);
+
+        end
+
         % ADD NODAL BOUNDARY CONDITION
         %
         % Inputs:
@@ -302,6 +385,26 @@ classdef c_sys_fem < handle
         function self = addNodeBC(self, p_i_node, p_bc)
 
             self.bc(p_i_node, :) = p_bc;
+
+        end
+
+        % CLAMPED NODAL BC (ALL 3 DOFS FIXED)
+        %
+        % Inputs:
+        %   p_i_node - node index the BC is to be applied to
+        function self = nodeBC_clamped(self, p_i_node)
+
+            self.addNodeBC(p_i_node, [1 1 1]);
+
+        end
+
+        % JOINTED NODAL BC (ROTATIONAL DOF FREE)
+        %
+        % Inputs:
+        %   p_i_node - node index the BC is to be applied to
+        function self = nodeBC_jointed(self, p_i_node)
+
+            self.addNodeBC(p_i_node, [1 1 0]);
 
         end
 
