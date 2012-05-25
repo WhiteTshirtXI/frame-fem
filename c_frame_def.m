@@ -36,7 +36,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-25 14:35 CEST
+% Last Modified : 2012-05-25 15:56 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -93,8 +93,15 @@ classdef c_frame_def < handle
             N = size(self.frame_nodes,1) + ...
                 sum(self.frame_beams(:,self.IDXB_NELEMENTS)-1);
 
+            % calculate number of system elements
+            NEl = sum(self.frame_beams(:,self.IDXB_NELEMENTS));
+
             % allocate system nodes-vector
             sys_nodes = zeros(N, 2);
+
+            % allocate system elements-cell array
+            % each row contains: { [elNode1 elNode2], [rhoA EA EI] }
+            sys_elements = cell(NEl, 2);
 
             % this vector contains the information of frame nodes, which
             % have already been added to the system nodes-vector and
@@ -106,6 +113,9 @@ classdef c_frame_def < handle
             % node counter, starting with 1
             i_node = 1;
 
+            % element counter, starting with 1
+            i_element = 1;
+
             % calculate nodes coordinates for each beam
             for beam = self.frame_beams'
 
@@ -115,6 +125,11 @@ classdef c_frame_def < handle
 
                 % beam number of elements
                 beamNEl = beam(self.IDXB_NELEMENTS);
+
+                % beam geometrical and material properties
+                beamRhoA = beam(self.IDXB_RHOA);
+                beamEA = beam(self.IDXB_EA);
+                beamEI = beam(self.IDXB_EI);
                 
                 % start and end node coordinates
                 xzStart = self.frame_nodes(beamFirstNode,:);
@@ -134,9 +149,8 @@ classdef c_frame_def < handle
                 % beam vector between start and end node
                 xzBeam = xzEnd - xzStart;
 
-                % get beam angle and beam length
-                lBeam = norm(xzBeam);
-                alphaBeam = -atan2(xzBeam(2),xzBeam(1));
+                % first element node index
+                elNode1 = frame_nodes_index(beamFirstNode);
 
                 % run through sub-nodes for the current beam
                 for i_subNode = 1:(beamNEl-1)
@@ -147,8 +161,22 @@ classdef c_frame_def < handle
                     % add sub-node to system nodes vector
                     sys_nodes(i_node,:) = xzSubNode;
 
+                    % second element node index
+                    elNode2 = i_node;
+
                     % increment node counter by one
                     i_node = i_node + 1;
+
+                    % add element data to system elements-cell vector
+                    sys_elements(i_element,:) = {[elNode1 elNode2] ...
+                                                 [beamRhoA beamEA ...
+                                                  beamEI] };
+
+                    % increment element counter by one
+                    i_element = i_element + 1;
+
+                    % switch first and second element node index
+                    elNode1 = elNode2;
 
                 end
                 
@@ -163,10 +191,25 @@ classdef c_frame_def < handle
                     i_node = i_node + 1;
                 end
 
+                % second element node index
+                elNode2 = frame_nodes_index(beamLastNode);
+
+                % add element data to system elements-cell vector
+                sys_elements(i_element,:) = {[elNode1 elNode2] ...
+                                             [beamRhoA beamEA beamEI] };
+
+                % increment element counter by one
+                i_element = i_element + 1;
+
             end
 
             % initialize fem-system class using the node list
             sys_fem = c_sys_fem(sys_nodes);
+
+            % subsequently add all beam elements to the fem system
+            for el = sys_elements'
+                sys_fem.add_element(el{1},el{2});
+            end
 
         end
     end

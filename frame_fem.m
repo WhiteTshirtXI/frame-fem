@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-25 14:32 CEST
+% Last Modified : 2012-05-25 15:53 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -182,6 +182,7 @@ frame = c_frame_def(frame_nodes);
 % add beams
 frame.addBeam(frame_beams);
 
+% discretize the system
 sys_fem = frame.discretize();
 
 % number of nodes 
@@ -197,32 +198,6 @@ n_nodes = sys_fem.N;
 %sys_fem.nodeBC_clamped(idx_node_1);
 % TEST: clamp the last node
 %sys_fem.nodeBC_clamped(idx_node_6);
-
-% first node index
-idx_n_start = 1;
-
-% run through all beams of the frame structure
-for beam = main_beams'
-
-    % end node index
-    idx_n_end = idx_n_start + beam(1);
-
-    % assemble start node index list for all the beam elements
-    list_n_start = [ idx_n_start:idx_n_end-1 ]';
-
-    % beam material and geometrical properties
-    beam_rhoA = beam(2);
-    beam_EA = beam(3);
-    beam_EI = beam(4);
-    
-    % add elements to the fem-system
-    sys_fem.add_element([list_n_start list_n_start+1], beam_rhoA, ...
-                                                       beam_EA, ...
-                                                       beam_EI);
-
-    idx_n_start = idx_n_end;
-
-end
 
 MSys = sys_fem.MSys;
 KSys = sys_fem.KSys;
