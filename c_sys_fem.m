@@ -22,6 +22,7 @@ classdef c_sys_fem < handle
 %
 %    N          - number of nodes
 %    nodes      - node list
+%    nAdj       - nodes adjacancy matrix
 %
 %    MSys       - system mass matrix
 %    KSys       - systen stiffness matrix
@@ -56,7 +57,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-25 16:04 CEST
+% Last Modified : 2012-05-25 16:22 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -83,6 +84,9 @@ classdef c_sys_fem < handle
 
         % node list (format: [x1 z1 ; x2 z2 ; ...])
         nodes;
+
+        % nodes adjacancy matrix
+        nAdj;
 
         % boundary conditions for each node and nodal DOF
         bc;
@@ -117,6 +121,9 @@ classdef c_sys_fem < handle
             % the number of system nodes equals the number of rows of
             % the array p_nodes
             self.N     = size(p_nodes, 1);
+
+            % allocate memory for the adjacancy matrix
+            self.nAdj = sparse(self.N,self.N);
 
             % initialize all boundary conditions to zero (non-fixed)
             self.bc = sparse(self.N,self.NDOF);
@@ -213,9 +220,15 @@ classdef c_sys_fem < handle
                     + Ke(bc_mask,bc_mask);    
 
 
-            % the system matrices have changed, so a recalculation of the
-            % eigenvalues is required
+            % the system matrices have changed, so a recalculation of
+            % the eigenvalues is required
             self.eigRecalc = true;
+
+            % add entries to adjacancy matrix according to the node
+            % indices
+            self.nAdj(p_idx(1),p_idx(2)) = self.nAdj(p_idx(1), ... 
+                                                     p_idx(2)) + 1;
+            self.nAdj(p_idx(2),p_idx(1)) = self.nAdj(p_idx(1),p_idx(2));
 
         end 
 
@@ -359,7 +372,9 @@ classdef c_sys_fem < handle
             nodeDisplacements(:,2:2:end) = V(2:self.NDOF:end,:);
 
             % call the plotDisplaced-method of the plot_nodes-class
-            self.plot_nodes.plotDisplaced(self.nodes, nodeDisplacements);
+            self.plot_nodes.plotDisplaced(self.nodes, ...
+                                          nodeDisplacements, ...
+                                          self.nAdj);
 
         end
 

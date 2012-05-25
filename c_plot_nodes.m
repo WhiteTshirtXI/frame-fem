@@ -27,7 +27,7 @@ classdef c_plot_nodes < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-23 14:51 CEST
-% Last Modified : 2012-05-24 15:50 CEST
+% Last Modified : 2012-05-25 16:26 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -79,7 +79,7 @@ classdef c_plot_nodes < handle
         %   p_dNodes - node displacement states [dx11 dz11 dx12 dz12 ;
         %                                        dx21 dz21 dx22 dz22 ;
         %                                                ...         ]
-        function self = plotDisplaced(self, p_nodes, p_dNodes)
+        function self = plotDisplaced(self, p_nodes, p_dNodes, p_Adj)
 
             % get number of displacement states
             nStates = size(p_dNodes,2)/2;
@@ -102,14 +102,14 @@ classdef c_plot_nodes < handle
 
                 % create subplot
                 subplot(n_rows, n_cols, state);
-                %axes(self.DEF_AXES_SET);
+                hold on;
                 axis equal;
                 axis(self.ax_limits);
 
                 % plot undisplaced and displaced nodes
-                line(p_nodes(:,1), p_nodes(:,2), self.LS_GREY_DASHED);
-                line(nodes_displaced(:,1), nodes_displaced(:,2), ...
-                     self.LS_BLACK_SOLID);
+                gplot(p_Adj, p_nodes, self.LS_GREY_DASHED);
+                gplot(p_Adj, nodes_displaced, self.LS_BLACK_SOLID);
+                hold off;
 
             end
 
