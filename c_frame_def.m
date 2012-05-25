@@ -23,12 +23,16 @@ classdef c_frame_def < handle
 %
 %    frame_nodes    - frame nodes array
 %    frame_beams    - frame beams array
+%    frame_nodes_bc - frame nodal boundary conditions array
 %
 % Methods :
-%    c_frame_def - constructor
-%    addBeam     - add beam(s) to the frame structure
-%    discretize  - discretize the frame structure using fem and return
-%                  sys_fem-class
+%    c_frame_def    - constructor
+%    addBeam        - add beam(s) to the frame structure
+%    discretize     - discretize the frame structure using fem and
+%                     return sys_fem-class
+%
+%    nodeBC_clamped - apply clamped boundary condition to frame nodes
+%    nodeBC_jointed - apply jointed boundary condition to frame nodes
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -36,7 +40,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-25 16:05 CEST
+% Last Modified : 2012-05-25 17:14 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -55,7 +59,10 @@ classdef c_frame_def < handle
         frame_nodes;
 
         % frame beams array ( [node1, node2, rhoA, EA, EI, nElements] )
-        frame_beams = [];
+        frame_beams;
+
+        % frame nodal boundary conditions array
+        frame_nodes_bc;
 
     end
 
@@ -69,6 +76,9 @@ classdef c_frame_def < handle
         function self = c_frame_def( p_nodes )
 
             self.frame_nodes = p_nodes;
+
+            % initialize boundary conditions vector as empty
+            self.frame_nodes_bc = zeros(size(p_nodes,1),3);
 
         end
 
@@ -206,10 +216,38 @@ classdef c_frame_def < handle
             % initialize fem-system class using the node list
             sys_fem = c_sys_fem(sys_nodes);
 
+            % apply nodal boundary conditions
+            sys_fem.addNodeBC(frame_nodes_index, self.frame_nodes_bc);
+
             % add all beam elements to the fem system
             sys_fem.add_elements(sys_elements);
 
         end
+
+        % APPLY CLAMPED BOUNDARY CONDITION TO FRAME NODES
+        %
+        % Inputs:
+        %   p_nodes - node indices of the nodes which need to be clamped
+        function self = nodeBC_clamped( self, p_nodes )
+
+            for node = p_nodes
+                self.frame_nodes_bc(node,:) = [1 1 1];
+            end
+
+        end
+
+        % APPLY JOINTED BOUNDARY CONDITION TO FRAME NODES
+        %
+        % Inputs:
+        %   p_nodes - node indices of the nodes which need to be joint^d
+        function self = nodeBC_jointed( self, p_nodes )
+
+            for node = p_nodes
+                self.frame_nodes_bc(node,:) = [1 1 0];
+            end
+
+        end
+
     end
 
 end

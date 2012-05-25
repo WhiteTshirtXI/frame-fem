@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-25 16:06 CEST
+% Last Modified : 2012-05-25 17:16 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -168,11 +168,23 @@ frame_beams = [ 1 2 rhoA1 EA1 EI1 nel1 ;
                 4 5 rhoA4 EA4 EI4 nel4 ;
                 5 6 rhoA5 EA5 EI5 nel5 ];
 
+
+%%% BOUNDARY CONDITIONS %%%
+% clamped nodes 
+nodes_clamped = [ ];
+% jointed nodes
+nodes_jointed = [ ];
+
+
 % create frame-class
 frame = c_frame_def(frame_nodes);
 
 % add beams
 frame.addBeam(frame_beams);
+
+% apply boundary conditions
+frame.nodeBC_clamped(nodes_clamped);
+frame.nodeBC_jointed(nodes_jointed);
 
 % discretize the system
 sys_fem = frame.discretize();
@@ -185,11 +197,6 @@ n_nodes = sys_fem.N;
 
 
 %%% ASSEMBLE SYSTEM MATRICES %%%
-
-% TEST: clamp the first node
-%sys_fem.nodeBC_clamped(idx_node_1);
-% TEST: clamp the last node
-%sys_fem.nodeBC_clamped(idx_node_6);
 
 MSys = sys_fem.MSys;
 KSys = sys_fem.KSys;
