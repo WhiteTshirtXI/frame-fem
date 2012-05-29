@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-29 09:55 CEST
+% Last Modified : 2012-05-29 12:07 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -123,16 +123,23 @@ for i_nel = NEL
         fprintf(['  Performing a modal analysis for the max. %i ' ...
                     'lowest eigenmodes ...\n'], MAXMODES);
 
+        % plot eigenmodes
         sys_fem.plotModes(MAXMODES);
 
+        % calculate eigenfrequencies
+        eigF = sort(sys_fem.eigF(MAXMODES));
 
-%        % write out all eigenfrequencies
-%        for m = 1:numel(eig_frq)
-%
-%            fprintf('  ... mode #%02i : f = %8.2f Hz\n', ...
-%                    [m,eig_frq(m)]);
-%
-%        end
+        % mode number
+        m = 1;
+
+        % write out all eigenfrequencies
+        for f = eigF'
+
+            fprintf('  ... mode #%02i : f = %8.2f Hz\n', [m,f]);
+
+            m = m + 1;
+
+        end
 
     end
 
