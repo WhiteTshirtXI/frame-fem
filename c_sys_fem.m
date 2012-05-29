@@ -58,7 +58,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-29 09:41 CEST
+% Last Modified : 2012-05-29 10:09 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -265,20 +265,37 @@ classdef c_sys_fem < handle
         end
 
         % CALCULATE ANGULAR EIGENFREQUENCIES
-        function omega = eigOmega(self)
+        %
+        % Inputs:
+        %   p_nModes - number of eigenfrequencies to be returned (may be
+        %              ommited to return all eigenfrequencies!)
+        function omega = eigOmega(self, p_nModes)
 
-            % recalculate eigenvalues, if neccessary
-            self.eigCalc();
+            % check if the parameter p_nModes has been specified
+            if exist('p_nModes')
+                [lambda,V] = self.getModes(p_nModes);
+            else
+                [lambda,V] = self.getAllModes();
+            end
 
             % return vector of angular eigenfrequencies
-            omega = imag(sqrt(diag(self.eigVal)));
+            omega = imag(sqrt(lambda));
 
         end
 
         % CALCULATE EIGENFREQUENCIES
-        function f = eigF(self)
+        %
+        % Inputs:
+        %   p_nModes - number of eigenfrequencies to be returned (may be
+        %              ommited to return all eigenfrequencies!)
+        function f = eigF(self, p_nModes)
 
-            f = self.eigOmega()./(2*pi);
+            % check if the parameter p_nModes has been specified
+            if exist('p_nModes')
+                f = self.eigOmega(p_nModes)./(2*pi);
+            else
+                f = self.eigOmega()./(2*pi);
+            end
 
         end
 
