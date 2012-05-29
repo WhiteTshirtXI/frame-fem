@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-29 09:35 CEST
+% Last Modified : 2012-05-29 09:55 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -35,17 +35,18 @@ clc;
 MAXMODES = 4;
 
 %%% beam properties (materials, geometry, etc.) %%%
+%%% according to FAHY 2007                      %%%
 
 % square crossection - height and width (m)
-H = 0.1;
-W = 0.1;
+H = 0.005;
+W = 0.02;
 % density (kg/m^3)
 RHO = 2700;
 % young's modulus (N/m^2)
-E = 72000e6;
+E = 71000e6;
 
 % length of beam (m)
-L = 1;
+L = 0.5;
 % beam rotation angle (rad)
 ALPHA = 0*pi/180;
 
