@@ -52,13 +52,15 @@ classdef c_sys_fem < handle
 %    nodeBC_clamped - clamped nodal BC (all three DOFs fixed)
 %    nodeBC_jointed - jointed nodal BC (rotational DOF free)
 %
+%    getFixedDOFs   - return vector of fixed dofs
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Author        : Felix Langfeldt
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-29 10:09 CEST
+% Last Modified : 2012-05-29 11:56 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -177,10 +179,6 @@ classdef c_sys_fem < handle
             % calculate element matrices
             [ Me, Ke ] = matrices_beam( le, alpha, p_bProp );
 
-            % get boundary conditions of both element nodes using the
-            % index vector
-            bc12 = self.bc(p_idx,:);
-
             % calculate DOF index vector for matrix summation to system
             % matrix
             %
@@ -202,23 +200,10 @@ classdef c_sys_fem < handle
             %         concatenating all of the matrix' columns
             idx_dof = m_idx_dof(:);
 
-            % fifth: to account for the boundary conditions in the
-            %        system stiffness matrix, create a mask vector by
-            %        inverting and concatenating the node-bc-vector
-            %        (-> 1 means, the nodal dof is free,
-            %         -> 0 means, the nodal dof is clamped and won't be
-            %            accounted for in the system matrices)
-            bc_mask = full(~(bc12(:)));
-
-            % sixth: finally, apply the BC-mask to the index vector
-            idx_dof_mask = idx_dof(bc_mask);
-
             % using these index vectors, add the element matrices to the
             % system matrices
-            self.MSys(idx_dof,idx_dof) = self.MSys(idx_dof,idx_dof) + Me;    
-            self.KSys(idx_dof_mask,idx_dof_mask) = ...
-                    self.KSys(idx_dof_mask,idx_dof_mask) ...
-                    + Ke(bc_mask,bc_mask);    
+            self.MSys(idx_dof,idx_dof) = self.MSys(idx_dof,idx_dof) + Me;
+            self.KSys(idx_dof,idx_dof) = self.KSys(idx_dof,idx_dof) + Ke;
 
 
             % the system matrices have changed, so a recalculation of
@@ -253,10 +238,23 @@ classdef c_sys_fem < handle
             % check if eigenvalue recalculation is neccessary
             if(self.eigRecalc)
 
+                sysDOF = self.sysDOF();
+
+                % mask vector for fixed DOF representation
+                bcMask = ~self.getFixedDOFs();
+
+                % number of non-fixed DOFs
+                bcNFree = nnz(bcMask);
+
+                % initialize eigenvector and eigenvalue matrices as zero
+                self.eigVec = zeros(sysDOF,bcNFree);
+                self.eigVal = zeros(bcNFree);
+
                 % WORKAROUND : using full() to convert the sparse system
                 %              matrices to full matrices
-                [self.eigVec,self.eigVal] = eig( full(self.KSys), ...
-                                                -full(self.MSys));
+                [self.eigVec(bcMask,:),self.eigVal] =                ...
+                                eig( full(self.KSys(bcMask,bcMask)), ...
+                                    -full(self.MSys(bcMask,bcMask)));
 
                 self.eigRecalc = false;
 
@@ -316,7 +314,7 @@ classdef c_sys_fem < handle
             % last cell of the eigenvalue-matrix, so the index of the
             % highest eigenvalue needs to be calculated according to
             % p_nModes.
-            idx_maxLambda = max(self.sysDOF()-nDel-p_nModes+1, 1);
+            idx_maxLambda = max(size(self.eigVal,1)-nDel-p_nModes+1,1);
 
             % eigenvalues vector
             lambda = flipud(diag(lambda_c(idx_maxLambda:end, ...
@@ -423,6 +421,20 @@ classdef c_sys_fem < handle
         function self = nodeBC_jointed(self, p_i_node)
 
             self.addNodeBC(p_i_node, [1 1 0]);
+
+        end
+
+        % RETURN VECTOR OF FIXED DOFS
+        function fixedDOFs = getFixedDOFs(self)
+
+            % 1 -> DOF is fixed
+            % 0 -> DOF is free
+
+            % assemble fixed dof vector by taking the transpose of the
+            % bc matrix ...
+            fixedDOFs = self.bc';
+            % ... and concatenate all columns
+            fixedDOFs = fixedDOFs(:);
 
         end
 
