@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-21 17:04 CEST
+% Last Modified : 2012-05-29 09:35 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -68,6 +68,17 @@ EA = E*A;
 EI = E*I;
 
 
+%%% beam nodes %%%
+beam_nodes = L*[ 0          0          ;
+                 cos(ALPHA) sin(ALPHA) ];
+
+%%% BOUNDARY CONDITIONS %%%
+% clamped nodes 
+nodes_clamped = [ 1 ];
+% jointed nodes
+nodes_jointed = [ 2 ];
+
+
 %%% do the following for every entry in the element number vector %%%
 
 % run number
@@ -85,33 +96,18 @@ for i_nel = NEL
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    % calculate element length
-    l_el = L/i_nel;
+    %%% create frame class %%%
+    frame = c_frame_def(beam_nodes);
 
-    % delta x and delta z for each node
-    deltaxz_node = l_el*[cos(ALPHA) -sin(ALPHA)];
-
-    % create nodes
-    nodes = [0:i_nel]'*deltaxz_node;
-
-    % create element node indices vector
-    % (this is rather simple: just put an element between each
-    % neighbored node)
-    nodes_el = [[1:i_nel]' [2:i_nel+1]'];
-
-    % initialize sys_fem-class using the node vector
-    sys_fem = c_sys_fem(nodes);
+    % add beam to frame
+    frame.addBeam( [ 1 2 RHOA EA EI i_nel]);
 
     % apply boundary conditions
-    % node 1:    all three DOFs = 0
-    sys_fem.addNodeBC(1, [1 1 1]);
-    % last node: only z-direction = 0
-    % WARNING: what if the beam is rotated??
-    sys_fem.addNodeBC(i_nel+1, [0 1 0]);
+    frame.nodeBC_clamped(nodes_clamped);
+    frame.nodeBC_jointed(nodes_jointed);
 
-    % add elements and assemble system matrices
-    sys_fem.add_element(nodes_el, RHOA, EA, EI);
-
+    % discretize the system
+    sys_fem = frame.discretize();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -126,19 +122,16 @@ for i_nel = NEL
         fprintf(['  Performing a modal analysis for the max. %i ' ...
                     'lowest eigenmodes ...\n'], MAXMODES);
 
-        % get eigenvalues and eigenvectors
-        [eig_val,eig_vec] = sys_fem.getModes(MAXMODES);
+        sys_fem.plotModes(MAXMODES);
 
-        % calculate eigenfrequencies
-        eig_frq = imag(sqrt(eig_val))/(2*pi);
 
-        % write out all eigenfrequencies
-        for m = 1:numel(eig_frq)
-
-            fprintf('  ... mode #%02i : f = %8.2f Hz\n', ...
-                    [m,eig_frq(m)]);
-
-        end
+%        % write out all eigenfrequencies
+%        for m = 1:numel(eig_frq)
+%
+%            fprintf('  ... mode #%02i : f = %8.2f Hz\n', ...
+%                    [m,eig_frq(m)]);
+%
+%        end
 
     end
 
