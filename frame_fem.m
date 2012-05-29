@@ -53,25 +53,25 @@ MUE_STEEL=0.3;
 
 % skin beam properties
 % skin height (m)
-SKIN_HEIGHT=0.1;
+SKIN_HEIGHT=0.013;
 % skin width (m)
-SKIN_WIDTH=0.1;     
+SKIN_WIDTH=0.68;     
 % skin length (m)
-SKIN_LENGTH=0.95;   
+SKIN_LENGTH=1.2;   
 
 % frame properties
 % frame height (m)
-FRAME_HEIGHT=0.1;  
+FRAME_HEIGHT=0.12;  
 % frame width (m)
 FRAME_WIDTH=SKIN_WIDTH;  
 % frame length (m)
-FRAME_LENGTH=0.1;  
+FRAME_LENGTH=0.004;  
 
 % frame bolt properties
 % bolt diameter (m)
 BOLT_DIAMETER=0.01;
 % bolt length (m) = double frame gap width (m)
-BOLT_LENGTH=0.1;
+BOLT_LENGTH=0.12;
 
 
 %%% material parameters %%%
@@ -82,7 +82,7 @@ BOLT_LENGTH=0.1;
 
 % frame properties
 % line mass (kg/m), % axial rigidity (N), % bending rigidity (N*m^2)
-[ rhoA_frame,EA_frame,EI_frame ] = prop_sec_rect(RHO_ALU,E_ALU,MUE_ALU,FRAME_LENGTH,FRAME_WIDTH,FRAME_HEIGHT);
+[ rhoA_frame,EA_frame,EI_frame ] = prop_sec_rect(RHO_ALU,E_ALU,MUE_ALU,FRAME_HEIGHT,FRAME_WIDTH,FRAME_LENGTH);
 
 % frame bolt properties
 % line mass (kg/m), % axial rigidity (N), % bending rigidity (N*m^2)
