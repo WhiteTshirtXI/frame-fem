@@ -60,7 +60,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-29 11:56 CEST
+% Last Modified : 2012-05-29 13:32 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -385,10 +385,25 @@ classdef c_sys_fem < handle
             %         every even column of the nodal displacement matrix
             nodeDisplacements(:,2:2:end) = V(2:self.NDOF:end,:);
 
+            % create titles for each subplot
+            
+            % calculate frequency
+            f = imag(sqrt(lambda))/(2*pi);
+            % mode numbers
+            mNumbers = [1:nModes]';
+
+            % concatenate both
+            titleNumbers = [mNumbers f]';
+
+            % format titles
+            titles = strread(sprintf('Mode %i : f = %8.2f Hz\n', ...
+                                     titleNumbers), '%s',        ...
+                             'delimiter', '\n');
+
             % call the plotDisplaced-method of the plot_nodes-class
             self.plot_nodes.plotDisplaced(self.nodes, ...
                                           nodeDisplacements, ...
-                                          self.nAdj);
+                                          self.nAdj, titles);
 
         end
 
