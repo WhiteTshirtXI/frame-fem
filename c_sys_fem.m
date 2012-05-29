@@ -47,6 +47,7 @@ classdef c_sys_fem < handle
 %    getAllModes    - return all eigenmodes
 %    removeModes    - remove eigenmodes with an eigenfrequency below a
 %                     certain tolerance
+%    plotModes      - plot eigenmodes
 %    addNodeBC      - add nodal boundary condition
 %    nodeBC_clamped - clamped nodal BC (all three DOFs fixed)
 %    nodeBC_jointed - jointed nodal BC (rotational DOF free)
@@ -57,7 +58,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-25 16:35 CEST
+% Last Modified : 2012-05-29 09:41 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
