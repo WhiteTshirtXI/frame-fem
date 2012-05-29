@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-17 13:06 CEST
+% Last Modified : 2012-05-25 17:16 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -131,14 +131,6 @@ EI3 = EI_BOLT;
 EI4 = EI2;
 EI5 = EI1;
 
-           
-% beam properties vector
-main_beams = [ nel1 rhoA1 EA1 EI1 ;
-               nel2 rhoA2 EA2 EI2 ;
-               nel3 rhoA3 EA3 EI3 ;
-               nel4 rhoA4 EA4 EI4 ;
-               nel5 rhoA5 EA5 EI5 ];
-
 
 %%% MAIN NODES %%%
 
@@ -161,62 +153,44 @@ zn5 = zn2;
 xn6 = xn5 + L;
 zn6 = zn5;
 
-% calculations of main node indices
-idx_node_1 = 1;                 % node 1
-idx_node_2 = idx_node_1+nel1;   % node 2
-idx_node_3 = idx_node_2+nel2;   % node 3
-idx_node_4 = idx_node_3+nel3;   % node 4
-idx_node_5 = idx_node_4+nel4;   % node 5
-idx_node_6 = idx_node_5+nel5;   % node 6
+% frame nodes coordinate vector
+frame_nodes = [ xn1 zn1 ;
+                xn2 zn2 ;
+                xn3 zn3 ;
+                xn4 zn4 ;
+                xn5 zn5 ;
+                xn6 zn6 ];
 
-% main node vector
-main_nodes = [ xn1 zn1 idx_node_1 ;
-               xn2 zn2 idx_node_2 ;
-               xn3 zn3 idx_node_3 ;
-               xn4 zn4 idx_node_4 ;
-               xn5 zn5 idx_node_5 ;
-               xn6 zn6 idx_node_6 ];
-
-% number of nodes equals index of node 6 !
-n_nodes = idx_node_6;
+% frame beams specification vector
+frame_beams = [ 1 2 rhoA1 EA1 EI1 nel1 ;
+                2 3 rhoA2 EA2 EI2 nel2 ;
+                3 4 rhoA3 EA3 EI3 nel3 ;
+                4 5 rhoA4 EA4 EI4 nel4 ;
+                5 6 rhoA5 EA5 EI5 nel5 ];
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% BOUNDARY CONDITIONS %%%
+% clamped nodes 
+nodes_clamped = [ ];
+% jointed nodes
+nodes_jointed = [ ];
 
 
-%%% CONSTRUCT ELEMENTS W/ ELEMENT MATRICES AND INDEX VECTORS %%%
+% create frame-class
+frame = c_frame_def(frame_nodes);
 
-% pre-allocate elements cell array
-elements = cell(idx_node_6-1, 3);
+% add beams
+frame.addBeam(frame_beams);
 
-% pre-allocate node matrix
-% row structure: [n_x n_z]
-nodes = zeros(n_nodes, 2);
+% apply boundary conditions
+frame.nodeBC_clamped(nodes_clamped);
+frame.nodeBC_jointed(nodes_jointed);
 
-% iteration counter
-i_beam = 1;
+% discretize the system
+sys_fem = frame.discretize();
 
-% iterate through all main beams
-for beam = main_beams'
-    
-    % start and end point coordinates
-    xz0 = main_nodes(i_beam,1:2);
-    xz1 = main_nodes(i_beam+1,1:2);
-    
-    % node index offset
-    nOffset = main_nodes(i_beam,3);
-
-    % min and max affected global element indices
-    eMin = nOffset;
-    eMax = nOffset+beam(1)-1;
-
-    % create elements and nodes
-    [elements(eMin:eMax,:), ...
-     nodes(eMin:eMax+1,:)]     = create_beam(xz0, xz1, nOffset, beam);
-
-    i_beam = i_beam + 1;
-
-end
+% number of nodes 
+n_nodes = sys_fem.N;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -224,93 +198,90 @@ end
 
 %%% ASSEMBLE SYSTEM MATRICES %%%
 
-[MSys, KSys] = build_sys_matrix(elements);
-
+MSys = sys_fem.MSys;
+KSys = sys_fem.KSys;
 
 %%% CALCULATE EIGENVALUES AND EIGENVECTORS %%%
 
 if MODAL_ANALYSIS > 0
 
-    % initialize figure
-    fig_modes = figure;
-
-    %number of subplots in x- and y-direction
-    n_subplots_x = ceil(sqrt(MODAL_ANALYSIS));
-    n_subplots_y = ceil(MODAL_ANALYSIS/n_subplots_x);
-
-    [eigVec,eigVal] = eig(KSys, -MSys);
-
-    % get eigenfrequencies
-    eigOm = imag(sqrt(diag(eigVal)));   % rad/s
-    eigF  = eigOm ./ (2*pi);            % Hz
-
-    % mode nr.
-    mode = 0;
-
-    for i = 1:MODAL_ANALYSIS
-
-        % if number of modes to be analyzed is greater than the actual
-        % number of modes, skip for loop
-        if i > size(eigF)
-            break;
-        end
-        
-        %mode = mode + 1;
-        %eigF_m = eigF(end-mode-1);
-
-        % if the eigenfrequency of the current mode is = 0, skip
-        while 1
-            mode = mode + 1;
-            eigF_m = eigF(end-mode-1);
-            if eigF_m > eps
-                break
-            end
-        end
-
-        % get mode shape
-        nodes_m = get_mode_shape(nodes, eigVec(:,end-mode-1));
-
-        % plot mode
-        fig_modes_sub = subplot(n_subplots_y, n_subplots_x, i, ...
-                                'parent', fig_modes);
-        plot_mode_shape(nodes, nodes_m, i, eigF_m);
-
-        % info output
-        fprintf('Mode %i : f = %8.2f Hz\n', [i, eigF_m]);
-
-
-    end
+    sys_fem.plotModes(MODAL_ANALYSIS);
 
 end
 
 
 %%% TRANSIENT ANALYSIS %%%
 
-% assemble matrices for transient ode-system
-MSys_y = [             MSys zeros(3*n_nodes) ;
-           zeros(3*n_nodes)   eye(3*n_nodes) ];
-MSys_y = sparse(MSys_y);
-
-KSys_y = [ zeros(3*n_nodes)            KSys ;
-            -eye(3*n_nodes) zeros(3*n_nodes) ];
-KSys_y = sparse(KSys_y);
+% initialize sparse matrices for transient ode-system
+% -> (2*number of dof)x(2*number of dof)-matrices
+MSys_y = sparse(2*3*n_nodes,2*3*n_nodes);
+KSys_y = sparse(2*3*n_nodes,2*3*n_nodes);
 
 
-% create force amplitude vector
-f_a = zeros(3*n_nodes,1);
+% the following steps are important for keeping the extended system
+% matrices for the transient ode-system as sparse as possible !!!
+
+% assemble extended mass matrix in two steps:
+% STEP 1: for every odd row and column of MSys_y add the
+%         corresponding matrix element of the system mass matrix
+%         (this leads to a matrix of the following structure
+%                    | M11  0  M12  0  M13  0 |
+%                    |  0   0   0   0   0   0 |
+%                    | M21  0  M22  0  M23  0 |
+%                    |  0   0   0   0   0   0 |
+%                    | M31  0  M32  0  M33  0 | 
+%                    |  0   0   0   0   0   0 | )
+MSys_y(1:2:end,1:2:end) = MSys; 
+
+% STEP 2: fill the even diagonal elements with ones 
+%         (this finally leads to a matrix of the following structure
+%                    | M11  0  M12  0  M13  0 |
+%                    |  0   1   0   0   0   0 |
+%                    | M21  0  M22  0  M23  0 |
+%                    |  0   0   0   1   0   0 |
+%                    | M31  0  M32  0  M33  0 |
+%                    |  0   0   0   0   0   1 | )
+MSys_y(2:2:end,2:2:end) = speye(3*n_nodes);
+
+% assemble extended stiffness matrix in two steps:
+% STEP 1: for every odd row and even column of KSys_y add the
+%         corresponding matrix element of the system stiffness matrix
+%         (this leads to a matrix of the following structure
+%                    | 0  K11  0  K12  0  K13 |
+%                    | 0   0   0   0   0   0  |
+%                    | 0  K21  0  K22  0  K23 |
+%                    | 0   0   0   0   0   0  |
+%                    | 0  K31  0  K32  0  K33 |
+%                    | 0   0   0   0   0   0  | )
+KSys_y(1:2:end,2:2:end) = KSys; 
+
+% STEP 2: fill the even elements of the first lower diagonal with
+%         negative ones
+%         (this finally leads to a matrix of the following structure
+%                    | 0  K11  0  K12  0  K13 |
+%                    | -1  0   0   0   0   0  |
+%                    | 0  K21  0  K22  0  K23 |
+%                    | 0   0   -1  0   0   0  |
+%                    | 0  K31  0  K32  0  K33 |
+%                    | 0   0   0   0   -1  0  | )
+KSys_y(2:2:end,1:2:end) = -speye(3*n_nodes);
+
+
+% initialize sparse force amplitude vector
+% -> (2*number of dof)-vector
+f_a = sparse(2*3*n_nodes,1);
 % the first node gets a z-force amplitude
-f_a(2) = 100.0;
-% expand force amplitude vector
-f_a = [f_a ; zeros(3*n_nodes,1)];
+% position in force vector: 1+6*(node_nr-1)+2*(dof_nr-1)
+f_a(3) = 100.0;
 
 % force function vector
-f_y = @(t) f_a*real(exp(j*OM*t));
+f_y = @(t) f_a*imag(exp(j*OM*t));
 
 % right hand side of system ODE
 f_rhs = @(t,y) f_y(t) - KSys_y*y;
 
 % initial values (all zero!)
-y_0 = zeros(2*3*n_nodes,1);
+y_0 = sparse(2*3*n_nodes,1);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -319,4 +290,3 @@ y_0 = zeros(2*3*n_nodes,1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%plot_nodes(nodes);
