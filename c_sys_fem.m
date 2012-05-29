@@ -24,6 +24,9 @@ classdef c_sys_fem < handle
 %    nodes      - node list
 %    nAdj       - nodes adjacancy matrix
 %
+%    bc         - boundary conditions for each node and nodal DOF
+%    bc_inf     - infinite boundary conditions for each node
+%
 %    MSys       - system mass matrix
 %    KSys       - systen stiffness matrix
 %
@@ -49,6 +52,7 @@ classdef c_sys_fem < handle
 %                     certain tolerance
 %    plotModes      - plot eigenmodes
 %    addNodeBC      - add nodal boundary condition
+%    addNodeBC_inf  - add nodal boundary condition for infinite elements
 %    nodeBC_clamped - clamped nodal BC (all three DOFs fixed)
 %    nodeBC_jointed - jointed nodal BC (rotational DOF free)
 %
@@ -60,7 +64,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-29 13:32 CEST
+% Last Modified : 2012-05-29 17:24 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -93,6 +97,9 @@ classdef c_sys_fem < handle
 
         % boundary conditions for each node and nodal DOF
         bc;
+
+        % infinite boundary conditions for each node
+        bc_inf;
 
         % system mass and stiffness matrices
         MSys;
@@ -130,6 +137,9 @@ classdef c_sys_fem < handle
 
             % initialize all boundary conditions to zero (non-fixed)
             self.bc = sparse(self.N,self.NDOF);
+
+            % initialize infinite bcs to zero
+            self.bc_inf = sparse(self.N,2);
 
             % overall degrees of freedom
             sysDOF = self.sysDOF();
@@ -416,6 +426,18 @@ classdef c_sys_fem < handle
         function self = addNodeBC(self, p_i_node, p_bc)
 
             self.bc(p_i_node, :) = p_bc;
+
+        end
+
+        % ADD NODAL BOUNDARY CONDITION FOR INFINITE ELEMENTS
+        %
+        % Inputs:
+        %   p_i_node - node index the BC is to be applied to
+        %   p_bc     - spring stiffness and damping coefficient
+        %              [Kinf Dinf]
+        function self = addNodeBC_inf(self, p_i_node, p_bc)
+
+            self.bc_inf(p_i_node, :) = p_bc;
 
         end
 

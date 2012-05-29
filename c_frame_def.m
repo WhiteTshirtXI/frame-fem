@@ -24,15 +24,19 @@ classdef c_frame_def < handle
 %    frame_nodes    - frame nodes array
 %    frame_beams    - frame beams array
 %    frame_nodes_bc - frame nodal boundary conditions array
+%    frame_inf_bc   - frame nodal boundary conditions array for infinite 
+%                     elements
 %
 % Methods :
-%    c_frame_def    - constructor
-%    addBeam        - add beam(s) to the frame structure
-%    discretize     - discretize the frame structure using fem and
-%                     return sys_fem-class
+%    c_frame_def     - constructor
+%    addBeam         - add beam(s) to the frame structure
+%    discretize      - discretize the frame structure using fem and
+%                      return sys_fem-class
 %
-%    nodeBC_clamped - apply clamped boundary condition to frame nodes
-%    nodeBC_jointed - apply jointed boundary condition to frame nodes
+%    nodeBC_clamped  - apply clamped boundary condition to frame nodes
+%    nodeBC_jointed  - apply jointed boundary condition to frame nodes
+%    nodeBC_infinite - apply infinite element boundary condition to
+%                      frame nodes (WANG & LAI 1999)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -40,7 +44,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-25 17:14 CEST
+% Last Modified : 2012-05-29 17:27 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -64,6 +68,10 @@ classdef c_frame_def < handle
         % frame nodal boundary conditions array
         frame_nodes_bc;
 
+        % frame infinite element bcs
+        % contains [ K_bc D_bc ] for each node (if not zero)
+        frame_inf_bc;
+
     end
 
     % METHODS
@@ -77,8 +85,9 @@ classdef c_frame_def < handle
 
             self.frame_nodes = p_nodes;
 
-            % initialize boundary conditions vector as empty
+            % initialize boundary conditions vectors as empty
             self.frame_nodes_bc = zeros(size(p_nodes,1),3);
+            self.frame_inf_bc = zeros(size(p_nodes,1),2);
 
         end
 
@@ -219,6 +228,10 @@ classdef c_frame_def < handle
             % apply nodal boundary conditions
             sys_fem.addNodeBC(frame_nodes_index, self.frame_nodes_bc);
 
+            % apply nodal boundary conditions for infinite elements
+            sys_fem.addNodeBC_inf(frame_nodes_index, ...
+                                  self.frame_inf_bc);
+
             % add all beam elements to the fem system
             sys_fem.add_elements(sys_elements);
 
@@ -239,11 +252,52 @@ classdef c_frame_def < handle
         % APPLY JOINTED BOUNDARY CONDITION TO FRAME NODES
         %
         % Inputs:
-        %   p_nodes - node indices of the nodes which need to be joint^d
+        %   p_nodes - node indices of the nodes which need to be joint
         function self = nodeBC_jointed( self, p_nodes )
 
             for node = p_nodes
                 self.frame_nodes_bc(node,:) = [1 1 0];
+            end
+
+        end
+
+        % APPLY INFINITE ELEMENT BOUNDARY CONDITION TO FRAME NODES
+        % (WAND & LAI 1999)
+        %
+        % Inputs:
+        %   p_nodes - node indices of the nodes where the infinite
+        %             elements need to be attached
+        %   p_omega - angular frequency of excitation
+        function self = nodeBC_infinite( self, p_nodes, p_omega )
+            
+            % clear boundary condition vector
+            self.frame_inf_bc = zeros(size(p_nodes,1),2);
+
+            for node = p_nodes
+
+                % TODO: this does not account for nodes, where multiple
+                % beams are connected to!
+                % TODO: change for arbitrarily oriented beams!
+                
+                % find firstmost beam ID which is connected to the
+                % specified node
+                [beamID,beamIDcol] = find(                           ...
+                   self.frame_beams(:,[self.IDXB_FIRSTNODE          ...
+                                       self.IDXB_LASTNODE]) == node,1);
+
+                % calculate bending wave number for the beam
+                beamRhoA = self.frame_beams(beamID,self.IDXB_RHOA);
+                beamEI   = self.frame_beams(beamID,self.IDXB_EI);
+
+                kB = sqrt(p_omega)*(beamRhoA/beamEI)^0.25;
+
+                % calculate spring stiffness and damping coefficient
+                bcK = 0.25*beamEI*kB^3;
+                bcD = bcK/p_omega;
+
+                % add to boundary condition vector
+                self.frame_inf_bc(node,:) = [ bcK bcD ];
+
             end
 
         end
