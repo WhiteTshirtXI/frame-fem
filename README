@@ -3,3 +3,24 @@ frame-fem
 
 This MATLAB script aids in the vibroacoustical finite element analysis
 of basic two-dimensional beam-type frame structures.
+
+
+INSTALLATION:
+=============
+
+Simply copy all *.m-files into a directory (e.g. ~/MATLAB/frame-fem/).
+
+
+USAGE:
+======
+
+Edit the main script-file frame_fem.m according to your needs. You can
+change the geometrical and material properties of the beams, specifiy
+the main nodes coordinates of the beams etc.
+
+To start the analysis, run MATLAB inside the installation directory of
+frame-fem (e.g. ~/MATLAB/frame-fem/), type
+
+	frame_fem
+
+and hit RETURN.
