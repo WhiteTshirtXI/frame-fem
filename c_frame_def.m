@@ -26,17 +26,23 @@ classdef c_frame_def < handle
 %    frame_nodes_bc - frame nodal boundary conditions array
 %    frame_inf_bc   - frame nodal boundary conditions array for infinite 
 %                     elements
+%    frame_fh       - nodal harmonic force amplitudes vector
 %
 % Methods :
-%    c_frame_def     - constructor
-%    addBeam         - add beam(s) to the frame structure
-%    discretize      - discretize the frame structure using fem and
-%                      return sys_fem-class
+%    c_frame_def       - constructor
 %
-%    nodeBC_clamped  - apply clamped boundary condition to frame nodes
-%    nodeBC_jointed  - apply jointed boundary condition to frame nodes
-%    nodeBC_infinite - apply infinite element boundary condition to
-%                      frame nodes (WANG & LAI 1999)
+%    addBeam           - add beam(s) to the frame structure
+%    discretize        - discretize the frame structure using fem and
+%                        return sys_fem-class
+%
+%    nodeBC_clamped    - apply clamped boundary condition to frame nodes
+%    nodeBC_jointed    - apply jointed boundary condition to frame nodes
+%    nodeBC_infinite   - apply infinite element boundary condition to
+%                        frame nodes (WANG & LAI 1999)
+%
+%    addHarmonicForce  - add harmonic force to nodes
+%    addHarmonicForceX - add harmonic force in x-direction to nodes
+%    addHarmonicForceZ - add harmonic force in z-direction to nodes
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -44,7 +50,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-29 17:27 CEST
+% Last Modified : 2012-05-30 15:08 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -72,6 +78,10 @@ classdef c_frame_def < handle
         % contains [ K_bc D_bc ] for each node (if not zero)
         frame_inf_bc;
 
+        % nodal harmonic force amplitudes vector
+        % ([fx1 fz1 mxz1; fx2 fz2 mxz2; ...])
+        frame_fh;
+
     end
 
     % METHODS
@@ -88,6 +98,9 @@ classdef c_frame_def < handle
             % initialize boundary conditions vectors as empty
             self.frame_nodes_bc = zeros(size(p_nodes,1),3);
             self.frame_inf_bc = zeros(size(p_nodes,1),2);
+
+            % initialize nodal forces and moments as empty
+            self.frame_fh = zeros(size(p_nodes,1),3);
 
         end
 
@@ -232,6 +245,12 @@ classdef c_frame_def < handle
             sys_fem.addNodeBC_inf(frame_nodes_index, ...
                                   self.frame_inf_bc);
 
+            % add harmonic force amplitudes to system
+            sys_fem.addNodeForces(frame_nodes_index, self.frame_fh);
+
+            % buld force vector
+            sys_fem.buildFSys();
+
             % add all beam elements to the fem system
             sys_fem.add_elements(sys_elements);
 
@@ -299,6 +318,51 @@ classdef c_frame_def < handle
                 self.frame_inf_bc(node,:) = [ bcK bcD ];
 
             end
+
+        end
+
+        % ADD HARMONIC FORCE TO NODES
+        %
+        % Inputs:
+        %   p_nodes  - node indices of the nodes where an external
+        %              harmonic force is applied
+        %   p_F      - force amplitude magnitude
+        %   p_Falpha - force direction (    0 -> pos. x-Direction
+        %                               +pi/2 -> neg. z-Direction
+        %                                  pi -> neg. x-Direction
+        %                               -pi/2 -> pos. z-Direction )
+        function self = addHarmonicForce( self, p_nodes, p_F, p_Falpha )
+
+            fx =  p_F*cos(p_Falpha);
+            fz = -p_F*sin(p_Falpha);
+
+            for node = p_nodes
+                self.frame_fh(node,1:2) = [fx fz];
+            end
+
+        end
+
+        % ADD HARMONIC FORCE IN X-DIRECTION TO NODES
+        %
+        % Inputs:
+        %   p_nodes  - node indices of the nodes where an external
+        %              harmonic force in x-direction is applied
+        %   p_F      - force amplitude magnitude
+        function self = addHarmonicForceX( self, p_nodes, p_F )
+
+            self.addHarmonicForce(p_nodes, p_F, 0);
+
+        end
+
+        % ADD HARMONIC FORCE IN Z-DIRECTION TO NODES
+        %
+        % Inputs:
+        %   p_nodes  - node indices of the nodes where an external
+        %              harmonic force in z-direction is applied
+        %   p_F      - force amplitude magnitude
+        function self = addHarmonicForceZ( self, p_nodes, p_F )
+
+            self.addHarmonicForce(p_nodes, p_F, -pi/2);
 
         end
 

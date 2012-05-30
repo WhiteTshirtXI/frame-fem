@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-29 17:26 CEST
+% Last Modified : 2012-05-30 14:39 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,7 +29,7 @@ clear all;
 %%% general options %%%
 
 % number of eigenmodes to be analysed after the elementation is done
-MODAL_ANALYSIS = 6;
+MODAL_ANALYSIS = 0;
 
 % Materials
 
@@ -236,6 +236,9 @@ end
 
 
 %%% HARMONIC ANALYSIS %%%
+
+% add harmonic force of 100 N in z-direction to the first node
+frame.addHarmonicForceZ(1, 100.0);
 
 % add infinite boundary element to the end nodes
 frame.nodeBC_infinite(6, OM);

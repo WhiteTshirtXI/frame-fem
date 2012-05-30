@@ -26,9 +26,11 @@ classdef c_sys_fem < handle
 %
 %    bc         - boundary conditions for each node and nodal DOF
 %    bc_inf     - infinite boundary conditions for each node
+%    fh         - harmonic force amplitudes for each node
 %
 %    MSys       - system mass matrix
-%    KSys       - systen stiffness matrix
+%    KSys       - system stiffness matrix
+%    fSys       - system nodal force vector
 %
 %    eigVal     - matrix of eigenvalues of the system
 %    eigVec     - matrix of eigenvectors of the system
@@ -58,13 +60,16 @@ classdef c_sys_fem < handle
 %
 %    getFixedDOFs   - return vector of fixed dofs
 %
+%    addNodeForces  - add nodal forces and moments
+%    buildFSys      - build system force vector
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Author        : Felix Langfeldt
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-29 17:24 CEST
+% Last Modified : 2012-05-30 15:10 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -101,9 +106,15 @@ classdef c_sys_fem < handle
         % infinite boundary conditions for each node
         bc_inf;
 
+        % harmonic force amplitudes for each node
+        fh;
+
         % system mass and stiffness matrices
         MSys;
         KSys;
+
+        % system nodal force vector
+        fSys;
 
         % eigenvalues and -vectors
         eigVal;
@@ -141,15 +152,19 @@ classdef c_sys_fem < handle
             % initialize infinite bcs to zero
             self.bc_inf = sparse(self.N,2);
 
+            % initialize force amplitudes to zero
+            self.fh = sparse(self.N,self.NDOF);
+
             % overall degrees of freedom
             sysDOF = self.sysDOF();
 
             % create node DOF index vector
             self.IDOF_VEC = [1:self.NDOF];
 
-            % allocate memory for the system matrices
+            % allocate memory for the system matrices and vectors
             self.MSys  = sparse(sysDOF,sysDOF);
             self.KSys  = sparse(sysDOF,sysDOF);
+            self.fSys  = sparse(sysDOF,sysDOF);
 
             % allocate memory for the eigenvalue matrices
             % self.eigVal = spalloc(sysDOF,sysDOF,sysDOF);
@@ -472,6 +487,28 @@ classdef c_sys_fem < handle
             fixedDOFs = self.bc';
             % ... and concatenate all columns
             fixedDOFs = fixedDOFs(:);
+
+        end
+
+        % ADD NODAL FORCES AND MOMENTS
+        %
+        % Inputs:
+        %   p_i_node - node index the force is acting on
+        %   p_f      - forces for each DOF
+        %              [f_x f_z m_xz]
+        function self = addNodeForces(self, p_i_node, p_f)
+
+            self.fh(p_i_node,:) = p_f;
+
+        end
+
+        % BUILD SYSTEM FORCE VECTOR
+        function self = buildFSys(self)
+
+            % build system force vector by reshaping the harmonic force
+            % matrix fh in a way that it becomes a column vector with
+            % sysDOF elements
+            self.fSys = reshape(self.fh.',1,[]).';
 
         end
 
