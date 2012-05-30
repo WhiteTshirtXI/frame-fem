@@ -29,6 +29,7 @@ classdef c_sys_fem < handle
 %    fh         - harmonic force amplitudes for each node
 %
 %    MSys       - system mass matrix
+%    DSys       - system damping matrix
 %    KSys       - system stiffness matrix
 %    fSys       - system nodal force vector
 %
@@ -69,7 +70,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-30 15:10 CEST
+% Last Modified : 2012-05-30 15:55 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -109,8 +110,9 @@ classdef c_sys_fem < handle
         % harmonic force amplitudes for each node
         fh;
 
-        % system mass and stiffness matrices
+        % system mass, damping and stiffness matrices
         MSys;
+        DSys;
         KSys;
 
         % system nodal force vector
@@ -150,7 +152,7 @@ classdef c_sys_fem < handle
             self.bc = sparse(self.N,self.NDOF);
 
             % initialize infinite bcs to zero
-            self.bc_inf = sparse(self.N,2);
+            self.bc_inf = sparse(self.N,2*self.NDOF);
 
             % initialize force amplitudes to zero
             self.fh = sparse(self.N,self.NDOF);
@@ -163,6 +165,7 @@ classdef c_sys_fem < handle
 
             % allocate memory for the system matrices and vectors
             self.MSys  = sparse(sysDOF,sysDOF);
+            self.DSys  = sparse(sysDOF,sysDOF);
             self.KSys  = sparse(sysDOF,sysDOF);
             self.fSys  = sparse(sysDOF,sysDOF);
 
@@ -254,6 +257,31 @@ classdef c_sys_fem < handle
                 self.add_element(beam{1},beam{2});
 
             end
+
+        end
+
+        % DO A HARMONIC ANALYSIS IN FREQUENCY DOMAIN
+        %
+        % Inputs:
+        %   p_om - angular frequency of harmonic excitation forces
+        function uFreq = harmonicAnalysis(self, p_om)
+
+            % add frequency dependent infinite boundary conditions to
+            % the diagonals of the system matrices
+            KSys_f = self.KSys + diag(reshape(                       ...
+                       self.bc_inf(:,1:self.NDOF).',1,[]             ...
+                                 ));
+            DSys_f = self.DSys + diag(reshape(                       ...
+                       self.bc_inf(:,self.NDOF+[1:self.NDOF]).',1,[] ...
+                                 ));
+
+            % calculate inverse transfer matrix
+            % (for a system of linear equations Ax=b this equals the
+            % matrix A!)
+            HSysI = (-p_om^2*self.MSys+1j*p_om*DSys_f+KSys_f);
+
+            % calculate complex displacement amplitudes via x=(A^-1)b
+            uFreq = HSysI\self.fSys;
 
         end
 
@@ -449,10 +477,12 @@ classdef c_sys_fem < handle
         % Inputs:
         %   p_i_node - node index the BC is to be applied to
         %   p_bc     - spring stiffness and damping coefficient
-        %              [Kinf Dinf]
+        %              for each DOF
+        %              [K_u K_w K_beta D_u D_w D_beta]
         function self = addNodeBC_inf(self, p_i_node, p_bc)
 
-            self.bc_inf(p_i_node, :) = p_bc;
+            % TODO: CURRENTLY ONLY THE TRANSVERSE DOF IS ACCOUNTED FOR!
+            self.bc_inf(p_i_node, [0:1]*self.NDOF+self.IDOF_W) = p_bc;
 
         end
 

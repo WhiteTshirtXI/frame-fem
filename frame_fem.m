@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-30 14:39 CEST
+% Last Modified : 2012-05-30 16:32 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -245,6 +245,37 @@ frame.nodeBC_infinite(6, OM);
 
 % discretize the system
 sys_fem = frame.discretize();
+
+% perform harmonic analysis to calculate the vector of complex
+% displacement amplitudes uH_c
+uH_c = sys_fem.harmonicAnalysis(OM);
+
+% rearrange the complex displacement amplitude vector to yield the x-
+% and z-components
+uH_c_xz = [uH_c(1:3:end) uH_c(2:3:end)];
+
+% calculate complex displacement velocity amplitudes
+vH_c_xz = 1i*OM*uH_c_xz;
+
+% get real part of the complex displacement amplitudes
+uH_xz = real(uH_c_xz);
+
+% get magnitude of the complex displacement amplitudes
+%uH_xz = abs(uH_c_xz);
+
+% normalize for nicer plotting
+uH_xz = 0.1*uH_xz/max(abs(uH_xz(:)));
+
+% visualize displacement amplitudes
+sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
+                                 {sprintf('f = %8.2f Hz', OM/(2*pi))});
+
+r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
+fprintf('%4.1f dB\n',full(r));
+
+
+
+
 
 %%% TRANSIENT ANALYSIS %%%
 
