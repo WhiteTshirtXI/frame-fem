@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-31 10:23 CEST
+% Last Modified : 2012-05-31 15:16 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -72,17 +72,6 @@ EI = E*I;
 EA = 0;
 
 
-%%% reference values %%%
-
-% first 3 eigenfrequencies of a clamped-free beam according to YOUNG and
-% FELGAR (1949)
-f_n1_ref = ( 3.92660230/L)^2*sqrt(EI/RHOA)/(2*pi);
-f_n2_ref = ( 7.06858275/L)^2*sqrt(EI/RHOA)/(2*pi);
-f_n3_ref = (10.21017613/L)^2*sqrt(EI/RHOA)/(2*pi);
-
-f_n_ref = [f_n1_ref f_n2_ref f_n3_ref];
-
-
 %%% beam nodes %%%
 beam_nodes = L*[ 0          0          ;
                  cos(ALPHA) sin(ALPHA) ];
@@ -108,6 +97,11 @@ if maxModes_corrected < MAXMODES
              maxModes_corrected);
     MAXMODES = maxModes_corrected;
 end
+
+
+f_n_ref=vv_beam_natFreq(MAXMODES, numel(nodes_jointed), numel(nodes_clamped))...
+    *sqrt(EI/RHOA)/(L^2*2*pi);
+
 
 %%% create eigenfrequency matrix where the rows correspond to each   %%%
 %%% mode and the columns correspond to each refinement stage         %%%
@@ -167,7 +161,7 @@ for i_nel = NEL
         f_results(:,i_run) = eigF;
 
         % calculate difference from reference frequencies
-        f_diff = (eigF.'-f_n_ref)./f_n_ref;
+        f_diff = (eigF-f_n_ref)./f_n_ref;
 
         % mode number
         m = 1;
