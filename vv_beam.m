@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-31 15:16 CEST
+% Last Modified : 2012-05-31 16:13 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -99,8 +99,10 @@ if maxModes_corrected < MAXMODES
 end
 
 
-f_n_ref=vv_beam_natFreq(MAXMODES, numel(nodes_jointed), numel(nodes_clamped))...
-    *sqrt(EI/RHOA)/(L^2*2*pi);
+% get reference frequencies
+f_n_ref = vv_beam_natFreq(MAXMODES, numel(nodes_jointed),            ...
+                          numel(nodes_clamped))                      ...
+          *sqrt(EI/RHOA)/(L^2*2*pi);
 
 
 %%% create eigenfrequency matrix where the rows correspond to each   %%%
