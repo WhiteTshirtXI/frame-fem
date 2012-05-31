@@ -31,67 +31,42 @@ clear all;
 % number of eigenmodes to be analysed after the elementation is done
 MODAL_ANALYSIS = 0;
 
-% Materials
 
-% Alu
-% Density (kg/m3)
-RHO_ALU=2700; 
-% Youngs Modulus (MPa)
-E_ALU=70e3; 
-% poisson constant (-)
-MUE_ALU=0.33;
-% Steel
-% Density (kg/m3)
-RHO_STEEL=8100;
-% Youngs Modulus (MPa)
-E_STEEL=210e3; 
-% poisson constant (-)
-MUE_STEEL=0.3;
-
-
-%%% geometric parameters %%%
-
-% skin beam properties
-% skin height (m)
-SKIN_HEIGHT=0.013;
-% skin width (m)
-SKIN_WIDTH=0.68;     
-% skin length (m)
-SKIN_LENGTH=1.2;   
-
-% frame properties
+% skin beam length (m)
+L = 2;
+%L = 1.00;
+% double frame gap width (m)
+B = 0.1;
+%B = 0.0;
 % frame height (m)
-FRAME_HEIGHT=0.12;  
-% frame width (m)
-FRAME_WIDTH=SKIN_WIDTH;  
-% frame length (m)
-FRAME_LENGTH=0.004;  
-
-% frame bolt properties
-% bolt diameter (m)
-BOLT_DIAMETER=0.01;
-% bolt length (m) = double frame gap width (m)
-BOLT_LENGTH=0.12;
+H = 0.12;
 
 
 %%% material parameters %%%
 
 % skin beam properties
-% line mass (kg/m), % axial rigidity (N), % bending rigidity (N*m^2)
-[ rhoA_skin,EA_skin,EI_skin ] = prop_sec_rect(RHO_ALU,E_ALU,MUE_ALU,SKIN_LENGTH,SKIN_WIDTH,SKIN_HEIGHT);
+% line mass (kg/m)
+RHOA_SKIN = 5.54;
+% axial rigidity (N)
+EA_SKIN = 143.7e6;
+% bending rigidity (N*m^2)
+EI_SKIN = 12266.5;
 
 % frame properties
-% line mass (kg/m), % axial rigidity (N), % bending rigidity (N*m^2)
-[ rhoA_frame,EA_frame,EI_frame ] = prop_sec_rect(RHO_ALU,E_ALU,MUE_ALU,FRAME_HEIGHT,FRAME_WIDTH,FRAME_LENGTH);
+% line mass (kg/m)
+RHOA_FRAME = 1.17;
+% axial rigidity (N)
+EA_FRAME = 30.24e6;
+% bending rigidity (N*m^2)
+EI_FRAME = 66949.1 ;
 
 % frame bolt properties
-% line mass (kg/m), % axial rigidity (N), % bending rigidity (N*m^2)
-[ rhoA_bolt,EA_bolt,EI_bolt ] = prop_sec_circle(RHO_ALU,E_ALU,MUE_ALU,BOLT_LENGTH,BOLT_DIAMETER);
-
-% wieder Löschen!
-rhoA_bolt=rhoA_frame;
-EA_bolt=EA_frame;
-EI_bolt=EI_frame;
+% line mass (kg/m)
+RHOA_BOLT = 0.788;
+% axial rigidity (N)
+EA_BOLT = 20.5e6;
+% bending rigidity (N*m^2)
+EI_BOLT = 247.397;
 
 
 %%% modeling parameters %%%
@@ -138,21 +113,21 @@ nel5 = nel1;
 %nel5 = 0;
 
 % material properties for each beam
-rhoA1 = rhoA_skin;
-rhoA2 = rhoA_frame;
-rhoA3 = rhoA_bolt;
+rhoA1 = RHOA_SKIN;
+rhoA2 = RHOA_FRAME;
+rhoA3 = RHOA_BOLT;
 rhoA4 = rhoA2;
 rhoA5 = rhoA1;
 
-EA1 = EA_skin;
-EA2 = EA_frame;
-EA3 = EA_bolt;
+EA1 = EA_SKIN;
+EA2 = EA_FRAME;
+EA3 = EA_BOLT;
 EA4 = EA2;
 EA5 = EA1;
 
-EI1 = EI_skin;
-EI2 = EI_frame;
-EI3 = EI_bolt;
+EI1 = EI_SKIN;
+EI2 = EI_FRAME;
+EI3 = EI_BOLT;
 EI4 = EI2;
 EI5 = EI1;
 
@@ -163,19 +138,19 @@ EI5 = EI1;
 xn1 = 0;
 zn1 = 0;
 
-xn2 = SKIN_LENGTH;
+xn2 = L;
 zn2 = zn1;
 
 xn3 = xn2;
-zn3 = FRAME_HEIGHT;
+zn3 = H;
 
-xn4 = xn2 + BOLT_LENGTH;
+xn4 = xn2 + B;
 zn4 = zn3;
 
 xn5 = xn4;
 zn5 = zn2;
 
-xn6 = xn5 + SKIN_LENGTH;
+xn6 = xn5 + L;
 zn6 = zn5;
 
 % frame nodes coordinate vector
