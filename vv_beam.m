@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-05-29 12:07 CEST
+% Last Modified : 2012-05-31 10:23 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -68,6 +68,20 @@ EA = E*A;
 % bending rigidity (N*m^2)
 EI = E*I;
 
+% BENDING MODES ONLY -> axial rigidity to zero
+EA = 0;
+
+
+%%% reference values %%%
+
+% first 3 eigenfrequencies of a clamped-free beam according to YOUNG and
+% FELGAR (1949)
+f_n1_ref = ( 3.92660230/L)^2*sqrt(EI/RHOA)/(2*pi);
+f_n2_ref = ( 7.06858275/L)^2*sqrt(EI/RHOA)/(2*pi);
+f_n3_ref = (10.21017613/L)^2*sqrt(EI/RHOA)/(2*pi);
+
+f_n_ref = [f_n1_ref f_n2_ref f_n3_ref];
+
 
 %%% beam nodes %%%
 beam_nodes = L*[ 0          0          ;
@@ -78,6 +92,26 @@ beam_nodes = L*[ 0          0          ;
 nodes_clamped = [ 1 ];
 % jointed nodes
 nodes_jointed = [ 2 ];
+
+
+%%% according to the lowest element number and the selected boundary %%%
+%%% conditions, the maximum number of modes might need a correction  %%%
+
+% corrected maximum modes count = (minimum number of elements + 1) *
+%                                 2 beam node DOFs - constrained dofs
+%                                 because of BCs
+maxModes_corrected = (min(NEL)+1)*2-numel(nodes_clamped)*2           ...
+                                   -numel(nodes_jointed);
+
+if maxModes_corrected < MAXMODES
+    fprintf(['CORRECTING maximum modes number to %i ...\n\n'],       ...
+             maxModes_corrected);
+    MAXMODES = maxModes_corrected;
+end
+
+%%% create eigenfrequency matrix where the rows correspond to each   %%%
+%%% mode and the columns correspond to each refinement stage         %%%
+f_results = zeros(MAXMODES, numel(NEL));
 
 
 %%% do the following for every entry in the element number vector %%%
@@ -129,13 +163,22 @@ for i_nel = NEL
         % calculate eigenfrequencies
         eigF = sort(sys_fem.eigF(MAXMODES));
 
+        % store eigenfrequencies in results matrix
+        f_results(:,i_run) = eigF;
+
+        % calculate difference from reference frequencies
+        f_diff = (eigF.'-f_n_ref)./f_n_ref;
+
         % mode number
         m = 1;
 
         % write out all eigenfrequencies
         for f = eigF'
 
-            fprintf('  ... mode #%02i : f = %8.2f Hz\n', [m,f]);
+            fprintf(['  ... mode #%02i :      f = %8.1f Hz\n'   ...
+                     '                    ref = %8.1f Hz\n'   ...
+                     '                   diff = %8.3f %%\n'], ...
+                    [m,f,f_n_ref(m),f_diff(m)]);
 
             m = m + 1;
 
