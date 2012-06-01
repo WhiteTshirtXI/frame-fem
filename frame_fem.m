@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-30 16:32 CEST
+% Last Modified : 2012-06-01 14:43 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,7 +29,7 @@ clear all;
 %%% general options %%%
 
 % number of eigenmodes to be analysed after the elementation is done
-MODAL_ANALYSIS = 0;
+MODAL_ANALYSIS = 4;
 
 
 % skin beam length (m)
@@ -207,6 +207,9 @@ if MODAL_ANALYSIS > 0
 
     sys_fem.plotModes(MODAL_ANALYSIS);
 
+    waitforbuttonpress();
+    close;
+
 end
 
 
@@ -243,7 +246,10 @@ uH_xz = 0.1*uH_xz/max(abs(uH_xz(:)));
 
 % visualize displacement amplitudes
 sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
-                                 {sprintf('f = %8.2f Hz', OM/(2*pi))});
+            {sprintf('Harmonic Analysis: f = %8.2f Hz', OM/(2*pi))});
+    
+waitforbuttonpress();
+close;
 
 r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
 fprintf('%4.1f dB\n',full(r));
