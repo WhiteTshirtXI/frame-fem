@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-01 14:43 CEST
+% Last Modified : 2012-06-01 14:55 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -99,6 +99,8 @@ OM = 100.0*2*pi;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% status message
+fprintf('> pre-processing ...\n');
 
 % !!! INSERT MINIMUM LENGTH CHECK !!!
 
@@ -193,7 +195,14 @@ sys_fem = frame.discretize();
 n_nodes = sys_fem.N;
 
 
+% status message
+fprintf('  ... discretized the system with %i nodes\n', sys_fem.N);
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% status message
+fprintf('\n> processing ...\n');
 
 
 %%% ASSEMBLE SYSTEM MATRICES %%%
@@ -205,6 +214,10 @@ KSys = sys_fem.KSys;
 
 if MODAL_ANALYSIS > 0
 
+    % status message
+    fprintf(['  ... calculating the %i lowest normal modes of the'   ...
+             ' system\n'], MODAL_ANALYSIS);
+
     sys_fem.plotModes(MODAL_ANALYSIS);
 
     waitforbuttonpress();
@@ -212,6 +225,11 @@ if MODAL_ANALYSIS > 0
 
 end
 
+
+
+% status message
+fprintf(['  ... performing a harmonic analysis for the system'   ...
+         ' @ f = %6.1f Hz\n'], OM/(2*pi));
 
 %%% HARMONIC ANALYSIS %%%
 
@@ -252,7 +270,7 @@ waitforbuttonpress();
 close;
 
 r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
-fprintf('%4.1f dB\n',full(r));
+fprintf('\n%4.1f dB\n',full(r));
 
 
 
