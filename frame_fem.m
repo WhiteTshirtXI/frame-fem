@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-01 14:55 CEST
+% Last Modified : 2012-06-01 14:56 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -220,8 +220,12 @@ if MODAL_ANALYSIS > 0
 
     sys_fem.plotModes(MODAL_ANALYSIS);
 
-    waitforbuttonpress();
-    close;
+    try
+
+        waitforbuttonpress();
+        close;
+
+    end
 
 end
 
@@ -265,9 +269,13 @@ uH_xz = 0.1*uH_xz/max(abs(uH_xz(:)));
 % visualize displacement amplitudes
 sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
             {sprintf('Harmonic Analysis: f = %8.2f Hz', OM/(2*pi))});
-    
-waitforbuttonpress();
-close;
+
+try
+
+    waitforbuttonpress();
+    close;
+
+end
 
 r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
 fprintf('\n%4.1f dB\n',full(r));
