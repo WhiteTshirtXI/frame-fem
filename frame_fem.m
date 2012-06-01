@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-01 14:56 CEST
+% Last Modified : 2012-06-01 15:11 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -33,7 +33,7 @@ MODAL_ANALYSIS = 4;
 
 
 % skin beam length (m)
-L = 2;
+L = 3;
 %L = 1.00;
 % double frame gap width (m)
 B = 0.1;
@@ -76,7 +76,7 @@ EI_BOLT = 247.397;
 % -> the more finite elements, the better
 
 % skin beam
-NEL_SKIN = 10;
+NEL_SKIN = 30;
 % frame beam
 NEL_FRAME = 2;
 % frame bolt beam
