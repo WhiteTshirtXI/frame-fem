@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-01 15:11 CEST
+% Last Modified : 2012-06-04 16:53 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -249,6 +249,28 @@ sys_fem = frame.discretize();
 % perform harmonic analysis to calculate the vector of complex
 % displacement amplitudes uH_c
 uH_c = sys_fem.harmonicAnalysis(OM);
+
+
+% POWER FLOW ANALYSIS
+% calculate complex displacement velocity amplitudes
+vH_c = 1i*OM*uH_c;
+
+% calculate complex internal forces at each node
+fi_c = sys_fem.calcInnerF(uH_c, OM);
+
+% calculate power at each node
+Pn = zeros(sys_fem.N, 1);
+for n = [1:sys_fem.N]
+
+    % index of first dof at current node
+    n0 = sys_fem.NDOF*(n-1)+1;
+    % index of last dof at current node
+    n1 = n0+sys_fem.NDOF-1;
+
+    % sum over all dofs
+    Pn(n) = 0.5*real(vH_c(n0:n1)'*fi_c(n0:n1));
+
+end
 
 % rearrange the complex displacement amplitude vector to yield the x-
 % and z-components
