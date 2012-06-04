@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-05-30 16:32 CEST
+% Last Modified : 2012-06-01 15:11 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,11 +29,11 @@ clear all;
 %%% general options %%%
 
 % number of eigenmodes to be analysed after the elementation is done
-MODAL_ANALYSIS = 0;
+MODAL_ANALYSIS = 4;
 
 
 % skin beam length (m)
-L = 2;
+L = 3;
 %L = 1.00;
 % double frame gap width (m)
 B = 0.1;
@@ -76,7 +76,7 @@ EI_BOLT = 247.397;
 % -> the more finite elements, the better
 
 % skin beam
-NEL_SKIN = 10;
+NEL_SKIN = 30;
 % frame beam
 NEL_FRAME = 2;
 % frame bolt beam
@@ -99,6 +99,8 @@ OM = 100.0*2*pi;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% status message
+fprintf('> pre-processing ...\n');
 
 % !!! INSERT MINIMUM LENGTH CHECK !!!
 
@@ -193,7 +195,14 @@ sys_fem = frame.discretize();
 n_nodes = sys_fem.N;
 
 
+% status message
+fprintf('  ... discretized the system with %i nodes\n', sys_fem.N);
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% status message
+fprintf('\n> processing ...\n');
 
 
 %%% ASSEMBLE SYSTEM MATRICES %%%
@@ -205,10 +214,26 @@ KSys = sys_fem.KSys;
 
 if MODAL_ANALYSIS > 0
 
+    % status message
+    fprintf(['  ... calculating the %i lowest normal modes of the'   ...
+             ' system\n'], MODAL_ANALYSIS);
+
     sys_fem.plotModes(MODAL_ANALYSIS);
+
+    try
+
+        waitforbuttonpress();
+        close;
+
+    end
 
 end
 
+
+
+% status message
+fprintf(['  ... performing a harmonic analysis for the system'   ...
+         ' @ f = %6.1f Hz\n'], OM/(2*pi));
 
 %%% HARMONIC ANALYSIS %%%
 
@@ -243,10 +268,17 @@ uH_xz = 0.1*uH_xz/max(abs(uH_xz(:)));
 
 % visualize displacement amplitudes
 sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
-                                 {sprintf('f = %8.2f Hz', OM/(2*pi))});
+            {sprintf('Harmonic Analysis: f = %8.2f Hz', OM/(2*pi))});
+
+try
+
+    waitforbuttonpress();
+    close;
+
+end
 
 r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
-fprintf('%4.1f dB\n',full(r));
+fprintf('\n%4.1f dB\n',full(r));
 
 
 

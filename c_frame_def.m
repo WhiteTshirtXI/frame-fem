@@ -50,7 +50,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-30 15:08 CEST
+% Last Modified : 2012-05-31 17:24 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -290,7 +290,7 @@ classdef c_frame_def < handle
         function self = nodeBC_infinite( self, p_nodes, p_omega )
             
             % clear boundary condition vector
-            self.frame_inf_bc = zeros(size(p_nodes,1),2);
+            self.frame_inf_bc = zeros(size(self.frame_nodes,1),2);
 
             for node = p_nodes
 
@@ -311,7 +311,7 @@ classdef c_frame_def < handle
                 kB = sqrt(p_omega)*(beamRhoA/beamEI)^0.25;
 
                 % calculate spring stiffness and damping coefficient
-                bcK = 0.25*beamEI*kB^3;
+                bcK = 0.5*beamEI*kB^3;
                 bcD = bcK/p_omega;
 
                 % add to boundary condition vector
