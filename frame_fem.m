@@ -31,6 +31,9 @@ clear all;
 % number of eigenmodes to be analysed after the elementation is done
 MODAL_ANALYSIS = 4;
 
+% activate plot of displaced beam ( 1 = show plot, 0 = don't show plot)
+show_plot = 1;
+
 
 % skin beam length (m)
 L = 3;
@@ -62,11 +65,11 @@ EI_FRAME = 66949.1 ;
 
 % frame bolt properties
 % line mass (kg/m)
-RHOA_BOLT = 0.788;
+RHOA_BOLT = 1.71;
 % axial rigidity (N)
-EA_BOLT = 20.5e6;
+EA_BOLT = 46.1e6;
 % bending rigidity (N*m^2)
-EI_BOLT = 247.397;
+EI_BOLT = 18555;
 
 
 %%% modeling parameters %%%
@@ -217,16 +220,13 @@ if MODAL_ANALYSIS > 0
     % status message
     fprintf(['  ... calculating the %i lowest normal modes of the'   ...
              ' system\n'], MODAL_ANALYSIS);
-
-    sys_fem.plotModes(MODAL_ANALYSIS);
-
-    try
-
-        waitforbuttonpress();
-        close;
-
+    if show_plot == 1;
+        sys_fem.plotModes(MODAL_ANALYSIS);
+        try
+            waitforbuttonpress();
+            close;
+        end
     end
-
 end
 
 
@@ -267,18 +267,18 @@ uH_xz = real(uH_c_xz);
 uH_xz = 0.1*uH_xz/max(abs(uH_xz(:)));
 
 % visualize displacement amplitudes
-sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
+if show_plot == 1;
+    sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
             {sprintf('Harmonic Analysis: f = %8.2f Hz', OM/(2*pi))});
-
-try
-
-    waitforbuttonpress();
-    close;
-
+    try
+        waitforbuttonpress();
+        close;
+    end
 end
 
 r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
-fprintf('\n%4.1f dB\n',full(r));
+TL=full(r);
+fprintf('\nTL =   %4.1f dB\n',TL);
 
 
 

@@ -64,9 +64,9 @@ classdef c_plot_nodes < handle
             % assign maximum and minimum coordinates to axis limits
 
             % minimum
-            self.ax_limits([1 3]) = min(p_nodes) - [0.1 0.3];
+            self.ax_limits([1 3]) = min(p_nodes) - [0.1 0.8];
             % maximum
-            self.ax_limits([2 4]) = max(p_nodes) + [0.1 0.3];
+            self.ax_limits([2 4]) = max(p_nodes) + [0.1 0.8];
 
         end
 
