@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-04 16:53 CEST
+% Last Modified : 2012-06-05 09:58 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -156,7 +156,8 @@ xn6 = xn5 + L;
 zn6 = zn5;
 
 % frame nodes coordinate vector
-frame_nodes = [ xn1 zn1 ;
+frame_nodes = [ -L   0  ;
+                xn1 zn1 ;
                 xn2 zn2 ;
                 xn3 zn3 ;
                 xn4 zn4 ;
@@ -165,10 +166,11 @@ frame_nodes = [ xn1 zn1 ;
 
 % frame beams specification vector
 frame_beams = [ 1 2 rhoA1 EA1 EI1 nel1 ;
-                2 3 rhoA2 EA2 EI2 nel2 ;
-                3 4 rhoA3 EA3 EI3 nel3 ;
-                4 5 rhoA4 EA4 EI4 nel4 ;
-                5 6 rhoA5 EA5 EI5 nel5 ];
+                2 3 rhoA1 EA1 EI1 nel1 ;
+                3 4 rhoA2 EA2 EI2 nel2 ;
+                4 5 rhoA3 EA3 EI3 nel3 ;
+                5 6 rhoA4 EA4 EI4 nel4 ;
+                6 7 rhoA5 EA5 EI5 nel5 ];
 
 
 %%% BOUNDARY CONDITIONS %%%
@@ -238,10 +240,10 @@ fprintf(['  ... performing a harmonic analysis for the system'   ...
 %%% HARMONIC ANALYSIS %%%
 
 % add harmonic force of 100 N in z-direction to the first node
-frame.addHarmonicForceZ(1, 100.0);
+frame.addHarmonicForceZ(2, 100.0);
 
 % add infinite boundary element to the end nodes
-frame.nodeBC_infinite(6, OM);
+frame.nodeBC_infinite([1 7], OM);
 
 % discretize the system
 sys_fem = frame.discretize();
@@ -276,9 +278,6 @@ end
 % and z-components
 uH_c_xz = [uH_c(1:3:end) uH_c(2:3:end)];
 
-% calculate complex displacement velocity amplitudes
-vH_c_xz = 1i*OM*uH_c_xz;
-
 % get real part of the complex displacement amplitudes
 uH_xz = real(uH_c_xz);
 
@@ -299,8 +298,8 @@ try
 
 end
 
-r=10*log10((abs(vH_c_xz(end,2))^2)/(abs(vH_c_xz(1,2))^2));
-fprintf('\n%4.1f dB\n',full(r));
+tau=10*log10((abs(Pn(end)))/(abs(Pn(1))+abs(Pn(end))));
+fprintf('\n%4.1f dB\n',full(tau));
 
 
 
