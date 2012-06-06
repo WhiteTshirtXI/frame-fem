@@ -50,7 +50,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-05-31 17:24 CEST
+% Last Modified : 2012-06-06 14:03 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -75,7 +75,8 @@ classdef c_frame_def < handle
         frame_nodes_bc;
 
         % frame infinite element bcs
-        % contains [ K_bc D_bc ] for each node (if not zero)
+        % contains stiffness and damping coefficients for each node and
+        % nodal DOF (if not zero)
         frame_inf_bc;
 
         % nodal harmonic force amplitudes vector
@@ -97,7 +98,7 @@ classdef c_frame_def < handle
 
             % initialize boundary conditions vectors as empty
             self.frame_nodes_bc = zeros(size(p_nodes,1),3);
-            self.frame_inf_bc = zeros(size(p_nodes,1),2);
+            self.frame_inf_bc = zeros(size(p_nodes,1),6);
 
             % initialize nodal forces and moments as empty
             self.frame_fh = zeros(size(p_nodes,1),3);
@@ -290,7 +291,7 @@ classdef c_frame_def < handle
         function self = nodeBC_infinite( self, p_nodes, p_omega )
             
             % clear boundary condition vector
-            self.frame_inf_bc = zeros(size(self.frame_nodes,1),2);
+            self.frame_inf_bc = zeros(size(self.frame_nodes,1),6);
 
             for node = p_nodes
 
@@ -304,18 +305,27 @@ classdef c_frame_def < handle
                    self.frame_beams(:,[self.IDXB_FIRSTNODE          ...
                                        self.IDXB_LASTNODE]) == node,1);
 
-                % calculate bending wave number for the beam
+                % calculate wave numbers for the beam
                 beamRhoA = self.frame_beams(beamID,self.IDXB_RHOA);
+                beamEA   = self.frame_beams(beamID,self.IDXB_EA);
                 beamEI   = self.frame_beams(beamID,self.IDXB_EI);
 
+                % longitudinal wave number
+                kL = p_omega*sqrt(beamRhoA/beamEA);
+                % bending wave number
                 kB = sqrt(p_omega)*(beamRhoA/beamEI)^0.25;
 
-                % calculate spring stiffness and damping coefficient
-                bcK = 0.5*beamEI*kB^3;
-                bcD = bcK/p_omega;
+                % calculate spring stiffness and damping coefficient for
+                % longitudinal case
+                bcKL = 0;
+                bcDL = beamEA*kL/p_omega;
+                % calculate spring stiffness and damping coefficient for
+                % bending case
+                bcKB = 0.5*beamEI*kB^3;
+                bcDB = bcKB/p_omega;
 
                 % add to boundary condition vector
-                self.frame_inf_bc(node,:) = [ bcK bcD ];
+                self.frame_inf_bc(node,:) = [ bcKL bcDL bcKB bcDB 0 0 ];
 
             end
 
