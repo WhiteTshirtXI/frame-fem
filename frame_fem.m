@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-05 09:58 CEST
+% Last Modified : 2012-06-06 16:06 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -306,82 +306,6 @@ TL=10*log10((abs(Pn(end)))/(abs(Pn(1))+abs(Pn(end))));
 % status message of Transmission loss 
 fprintf('\n%4.1f dB\n',full(TL));
 
-
-
-
-
-%%% TRANSIENT ANALYSIS %%%
-
-% initialize sparse matrices for transient ode-system
-% -> (2*number of dof)x(2*number of dof)-matrices
-MSys_y = sparse(2*3*n_nodes,2*3*n_nodes);
-KSys_y = sparse(2*3*n_nodes,2*3*n_nodes);
-
-
-% the following steps are important for keeping the extended system
-% matrices for the transient ode-system as sparse as possible !!!
-
-% assemble extended mass matrix in two steps:
-% STEP 1: for every odd row and column of MSys_y add the
-%         corresponding matrix element of the system mass matrix
-%         (this leads to a matrix of the following structure
-%                    | M11  0  M12  0  M13  0 |
-%                    |  0   0   0   0   0   0 |
-%                    | M21  0  M22  0  M23  0 |
-%                    |  0   0   0   0   0   0 |
-%                    | M31  0  M32  0  M33  0 | 
-%                    |  0   0   0   0   0   0 | )
-MSys_y(1:2:end,1:2:end) = MSys; 
-
-% STEP 2: fill the even diagonal elements with ones 
-%         (this finally leads to a matrix of the following structure
-%                    | M11  0  M12  0  M13  0 |
-%                    |  0   1   0   0   0   0 |
-%                    | M21  0  M22  0  M23  0 |
-%                    |  0   0   0   1   0   0 |
-%                    | M31  0  M32  0  M33  0 |
-%                    |  0   0   0   0   0   1 | )
-MSys_y(2:2:end,2:2:end) = speye(3*n_nodes);
-
-% assemble extended stiffness matrix in two steps:
-% STEP 1: for every odd row and even column of KSys_y add the
-%         corresponding matrix element of the system stiffness matrix
-%         (this leads to a matrix of the following structure
-%                    | 0  K11  0  K12  0  K13 |
-%                    | 0   0   0   0   0   0  |
-%                    | 0  K21  0  K22  0  K23 |
-%                    | 0   0   0   0   0   0  |
-%                    | 0  K31  0  K32  0  K33 |
-%                    | 0   0   0   0   0   0  | )
-KSys_y(1:2:end,2:2:end) = KSys; 
-
-% STEP 2: fill the even elements of the first lower diagonal with
-%         negative ones
-%         (this finally leads to a matrix of the following structure
-%                    | 0  K11  0  K12  0  K13 |
-%                    | -1  0   0   0   0   0  |
-%                    | 0  K21  0  K22  0  K23 |
-%                    | 0   0   -1  0   0   0  |
-%                    | 0  K31  0  K32  0  K33 |
-%                    | 0   0   0   0   -1  0  | )
-KSys_y(2:2:end,1:2:end) = -speye(3*n_nodes);
-
-
-% initialize sparse force amplitude vector
-% -> (2*number of dof)-vector
-f_a = sparse(2*3*n_nodes,1);
-% the first node gets a z-force amplitude
-% position in force vector: 1+6*(node_nr-1)+2*(dof_nr-1)
-f_a(3) = 100.0;
-
-% force function vector
-f_y = @(t) f_a*imag(exp(j*OM*t));
-
-% right hand side of system ODE
-f_rhs = @(t,y) f_y(t) - KSys_y*y;
-
-% initial values (all zero!)
-y_0 = sparse(2*3*n_nodes,1);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
