@@ -31,6 +31,9 @@ clear all;
 % number of eigenmodes to be analysed after the elementation is done
 MODAL_ANALYSIS = 4;
 
+% activate plot (show = 1, hide = 0)
+show_plots = 1;
+
 
 % skin beam length (m)
 L = 3;
@@ -220,15 +223,15 @@ if MODAL_ANALYSIS > 0
     fprintf(['  ... calculating the %i lowest normal modes of the'   ...
              ' system\n'], MODAL_ANALYSIS);
 
-    sys_fem.plotModes(MODAL_ANALYSIS);
+    if show_plots == 1
+        sys_fem.plotModes(MODAL_ANALYSIS);
 
-    try
-
-        waitforbuttonpress();
-        close;
-
+        try
+            waitforbuttonpress();
+            close;
+        end
+        
     end
-
 end
 
 
@@ -288,18 +291,20 @@ uH_xz = real(uH_c_xz);
 uH_xz = 0.1*uH_xz/max(abs(uH_xz(:)));
 
 % visualize displacement amplitudes
-sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
+if show_plots == 1;
+    sys_fem.plot_nodes.plotDisplaced(sys_fem.nodes, uH_xz, sys_fem.nAdj, ...
             {sprintf('Harmonic Analysis: f = %8.2f Hz', OM/(2*pi))});
-
-try
-
-    waitforbuttonpress();
-    close;
-
+    try
+        waitforbuttonpress();
+        close;
+    end
 end
 
-tau=10*log10((abs(Pn(end)))/(abs(Pn(1))+abs(Pn(end))));
-fprintf('\n%4.1f dB\n',full(tau));
+% calculate Transmission loss (dB) by the ratio of power input and power
+% output
+TL=10*log10((abs(Pn(end)))/(abs(Pn(1))+abs(Pn(end))));
+% status message of Transmission loss 
+fprintf('\n%4.1f dB\n',full(TL));
 
 
 
