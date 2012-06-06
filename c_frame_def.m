@@ -50,7 +50,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-06-06 13:31 CEST
+% Last Modified : 2012-06-06 14:03 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -318,7 +318,7 @@ classdef c_frame_def < handle
                 % calculate spring stiffness and damping coefficient for
                 % longitudinal case
                 bcKL = 0;
-                bcDL = beamEA*kL/p_omega
+                bcDL = beamEA*kL/p_omega;
                 % calculate spring stiffness and damping coefficient for
                 % bending case
                 bcKB = 0.5*beamEI*kB^3;
