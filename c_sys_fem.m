@@ -73,7 +73,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-06-04 16:03 CEST
+% Last Modified : 2012-06-06 13:40 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -279,11 +279,9 @@ classdef c_sys_fem < handle
             % add frequency dependent infinite boundary conditions to
             % the diagonals of the system matrices
             KSys_f = self.KSys + diag(reshape(                       ...
-                       self.bc_inf(:,1:self.NDOF).',1,[]             ...
-                                 ));
+                                        self.bc_inf(:,1:2:end).',1,[]));
             DSys_f = self.DSys + diag(reshape(                       ...
-                       self.bc_inf(:,self.NDOF+[1:self.NDOF]).',1,[] ...
-                                 ));
+                                        self.bc_inf(:,2:2:end).',1,[]));
 
             % calculate inverse transfer matrix
             % (for a system of linear equations Ax=b this equals the
@@ -491,8 +489,7 @@ classdef c_sys_fem < handle
         %              [K_u K_w K_beta D_u D_w D_beta]
         function self = addNodeBC_inf(self, p_i_node, p_bc)
 
-            % TODO: CURRENTLY ONLY THE TRANSVERSE DOF IS ACCOUNTED FOR!
-            self.bc_inf(p_i_node, [0:1]*self.NDOF+self.IDOF_W) = p_bc;
+            self.bc_inf(p_i_node, :) = p_bc;
 
         end
 
