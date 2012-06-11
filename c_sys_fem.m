@@ -73,7 +73,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-06-09 16:02 CEST
+% Last Modified : 2012-06-11 17:31 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -276,6 +276,12 @@ classdef c_sys_fem < handle
         %   p_om - angular frequency of harmonic excitation forces
         function uFreq = harmonicAnalysis(self, p_om)
 
+            % pre-allocate displacement vector
+            uFreq = zeros(self.sysDOF(),1);
+
+            % mask vector for fixed DOF representation
+            bcMask = ~self.getFixedDOFs();
+
             % add frequency dependent infinite boundary conditions to
             % the diagonals of the system matrices
             KSys_f = self.KSys + diag(reshape(                       ...
@@ -289,7 +295,7 @@ classdef c_sys_fem < handle
             HSysI = (-p_om^2*self.MSys+1j*p_om*DSys_f+KSys_f);
 
             % calculate complex displacement amplitudes via x=(A^-1)b
-            uFreq = HSysI\self.fSys;
+            uFreq(bcMask) = HSysI(bcMask,bcMask)\self.fSys(bcMask);
 
         end
 
