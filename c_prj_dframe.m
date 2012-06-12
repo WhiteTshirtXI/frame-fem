@@ -116,7 +116,7 @@ classdef c_prj_dframe < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-06 16:02 CEST
-% Last Modified : 2012-06-09 14:23 CEST
+% Last Modified : 2012-06-12 14:05 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -177,9 +177,9 @@ classdef c_prj_dframe < handle
         % infinite element nodes for harmonic analysis
         D_BC_INFINIT = 'firstAndLast';
 
-        % probe node indices (before and after double-frame structure)
-        % TODO: correct to [ 3 6 ]
-        D_PROBES = 'firstAndLast';
+        % probe node indices (after double-frame structure)
+        % TODO: correct to [ 6 ]
+        D_PROBES = 6;
 
         % default configuration options
         % bash mode
@@ -424,13 +424,19 @@ classdef c_prj_dframe < handle
             f = s.fem.calcInnerF(u, s.omega);
 
             % extract the values from the probe-nodes
-            u = s.extractNodes(u, s.probes);
-            f = s.extractNodes(f, s.probes);
+            u_p = s.extractNodes(u, s.probes);
+            f_p = s.extractNodes(f, s.probes);
 
-            % calculate power
-            P = real(0.5*1i*s.omega*diag(f*u'));
+            % extract the node displacement at the force node 
+            u_f = s.extractNodes(u, s.fNodes);
 
-            tl = 10*log10(abs(P(end))/sum(abs(P)));
+            % calculate powers at probe and force nodes
+            P_p = sum(real(0.5*f_p.*conj(1i*s.omega*u_p)));
+            P_f = sum(real(0.5*s.f.*conj(1i*s.omega*u_f)));
+
+            % tl equals 10*log10(transmitted power through
+            % double-frame/power by the excitation force)
+            tl = 10*log10(abs(P_p)/abs(P_f));
 
         end
 
