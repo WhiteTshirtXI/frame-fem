@@ -88,27 +88,36 @@ classdef c_prj_dframe < handle
 %    cfg_bashm    - bash (quiet) mode activation 
 %
 % Methods :
-%    c_prj_dframe - constructor
-%    setDefaults  - set default values
+%    c_prj_dframe    - constructor
+%    setDefaults     - set default values
 %
-%    initFrame    - initialize frame class
-%    initFEA      - initialize FE-analysis
-%    initNodes    - initialize structural nodes
-%    initBeams    - initialize structural beams
-%    initBCs      - initialize boundary conditions
-%    initForces   - initialize nodal forces
+%    initFrame       - initialize frame class
+%    initFEA         - initialize FE-analysis
+%    initNodes       - initialize structural nodes
+%    initBeams       - initialize structural beams
+%    initBCs         - initialize boundary conditions
+%    initForces      - initialize nodal forces
 %
-%    calcTL       - calculate transmission loss in double-frame
+%    calcTL          - calculate transmission loss in double-frame
 %
-%    study_lInf   - parameter study of infinite element beam length
-%    study_EIBolt - parameter study of bolt bending rigidity
+%    study_lInf      - parameter study of infinite element beam length
+%    study_h         - parameter study of frame height
+%    study_w         - parameter study of bolt length
 %
-%    getIndices   - return node indices of specific nodes
-%    extractNodes - extract specific node variable data from the
-%                   discretized system
-%    vectIndices  - return data vector indices for specified nodes
+%    study_rhoAFrame - parameter study of frame mass
+%    study_EAFrame   - parameter study of frame axial rigidity
+%    study_EIFrame   - parameter study of frame bending rigidity
 %
-%    txtOut       - text output
+%    study_rhoABolt  - parameter study of bolt mass
+%    study_EABolt    - parameter study of bolt axial rigidity
+%    study_EIBolt    - parameter study of bolt bending rigidity
+%
+%    getIndices      - return node indices of specific nodes
+%    extractNodes    - extract specific node variable data from the
+%                      discretized system
+%    vectIndices     - return data vector indices for specified nodes
+%
+%    txtOut          - text output
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -116,7 +125,7 @@ classdef c_prj_dframe < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-06 16:02 CEST
-% Last Modified : 2012-06-14 13:09 CEST
+% Last Modified : 2012-06-14 13:29 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -462,6 +471,247 @@ classdef c_prj_dframe < handle
 
                 % re-initialize everything
                 s.initNodes();
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+
+        end
+
+        % PARAMETER STUDY OF FRAME HEIGHT
+        %
+        % Inputs:
+        %   p_h - value range for parameter h
+        function result = study_h(s, p_h)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_h),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for h = p_h
+
+                s.h = h;
+
+                c = c + 1;
+
+                % re-initialize everything
+                s.initNodes();
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+
+        end
+
+        % PARAMETER STUDY OF BOLT LENGTH
+        %
+        % Inputs:
+        %   p_w - value range for parameter w
+        function result = study_w(s, p_w)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_w),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for w = p_w
+
+                s.w = w;
+
+                c = c + 1;
+
+                % re-initialize everything
+                s.initNodes();
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+
+        end
+        
+        % PARAMETER STUDY OF FRAME MASS
+        %
+        % Inputs:
+        %   p_rhoAFrame - value range for parameter rhoAFrame
+        function result = study_rhoAFrame(s, p_rhoAFrame)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_rhoAFrame),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % initialize nodes
+            s.initNodes();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for rhoAFrame = p_rhoAFrame
+
+                s.rhoAFrame = rhoAFrame;
+
+                c = c + 1;
+
+                % re-initialize everything
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+            
+        end
+        
+        % PARAMETER STUDY OF FRAME AXIAL RIGIDITY
+        %
+        % Inputs:
+        %   p_EAFrame - value range for parameter EAFrame
+        function result = study_EAFrame(s, p_EAFrame)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_EAFrame),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % initialize nodes
+            s.initNodes();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for EAFrame = p_EAFrame
+
+                s.EAFrame = EAFrame;
+
+                c = c + 1;
+
+                % re-initialize everything
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+
+        end
+
+        % PARAMETER STUDY OF FRAME BENDING RIGIDITY
+        %
+        % Inputs:
+        %   p_EIBolt - value range for parameter EIFrame
+        function result = study_EIFrame(s, p_EIFrame)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_EIFrame),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % initialize nodes
+            s.initNodes();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for EIFrame = p_EIFrame
+
+                s.EIFrame = EIFrame;
+
+                c = c + 1;
+
+                % re-initialize everything
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+
+        end
+        
+        % PARAMETER STUDY OF BOLT MASS
+        %
+        % Inputs:
+        %   p_rhoABolt - value range for parameter rhoABolt
+        function result = study_rhoABolt(s, p_rhoABolt)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_rhoABolt),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % initialize nodes
+            s.initNodes();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for rhoABolt = p_rhoABolt
+
+                s.rhoABolt = rhoABolt;
+
+                c = c + 1;
+
+                % re-initialize everything
+                s.initBeams();
+                s.initFEA();
+
+                result(c) = s.calcTL();
+
+            end % iteration
+
+        end
+        
+        % PARAMETER STUDY OF BOLT AXIAL RIGIDITY
+        %
+        % Inputs:
+        %   p_EABolt - value range for parameter EABolt
+        function result = study_EABolt(s, p_EABolt)
+
+            % pre-allocate results vector
+            result = zeros(numel(p_EABolt),1);
+            
+            % reset project to default values
+            s.setDefaults();
+
+            % initialize nodes
+            s.initNodes();
+
+            % iteration counter
+            c = 0;
+
+            % begin iteration
+            for EABolt = p_EABolt
+
+                s.EABolt = EABolt;
+
+                c = c + 1;
+
+                % re-initialize everything
                 s.initBeams();
                 s.initFEA();
 

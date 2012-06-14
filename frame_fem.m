@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-14 14:00 CEST
-% Last Modified : 2012-06-09 14:20 CEST
+% Last Modified : 2012-06-14 13:24 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -47,14 +47,25 @@ SHOW_PLOTS = 1;
 % create double-frame project-class
 prj = c_prj_dframe();
 
-% parameter study of bolt bending rigidity
-EIBolt=logspace(1,3);
+% parameter study
+
+% first decade
+dec_0 = 1;
+% number of decades
+dec_n = 6;
+% number of points per decade
+dec_nP = 25;
+
+x = logspace(dec_0,dec_0+dec_n,dec_n*dec_nP);
 
 % get the results
-res_EIBolt = prj.study_EIBolt(EIBolt);
+TL = prj.study_EIBolt(x);
 
 % plot the results
-semilogx(EIBolt,res_EIBolt);
+semilogx(x,-TL);
+
+% OUTPUT matrix
+OUT = [x' TL];
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
