@@ -116,7 +116,7 @@ classdef c_prj_dframe < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-06 16:02 CEST
-% Last Modified : 2012-06-12 14:05 CEST
+% Last Modified : 2012-06-14 13:09 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -133,7 +133,7 @@ classdef c_prj_dframe < handle
 
         % default skin beam properties
         % element density (elements per unit length)
-        D_NSKIN = 10;
+        D_NSKIN = 50;
         % mass per unit length
         D_RHOASKIN = 5.54;
         % axial rigidity
@@ -143,23 +143,23 @@ classdef c_prj_dframe < handle
 
         % default frame beam properties
         % element density (elements per unit length)
-        D_NFRAME = 15;
+        D_NFRAME = 50;
         % mass per unit length
-        D_RHOAFRAME = 1.17;
+        D_RHOAFRAME = 3.37;
         % axial rigidity
-        D_EAFRAME = 30.24e6;
+        D_EAFRAME = 87.36e6;
         % bending rigidity
-        D_EIFRAME = 66949.1;
+        D_EIFRAME = 221240;
 
         % default bolt beam properties
         % element density (elements per unit length)
-        D_NBOLT = 15;
+        D_NBOLT = 50;
         % mass per unit length
-        D_RHOABOLT = 0.788;
+        D_RHOABOLT = 2.71;
         % axial rigidity
-        D_EABOLT = 20.5e6;
+        D_EABOLT = 73.1e6;
         % bending rigidity
-        D_EIBOLT = 247.397;
+        D_EIBOLT = 16717;
 
         % frequencies
         D_OMEGA = 100*2*pi;
@@ -178,7 +178,6 @@ classdef c_prj_dframe < handle
         D_BC_INFINIT = 'firstAndLast';
 
         % probe node indices (after double-frame structure)
-        % TODO: correct to [ 6 ]
         D_PROBES = 6;
 
         % default configuration options
@@ -420,7 +419,6 @@ classdef c_prj_dframe < handle
             u = s.fem.harmonicAnalysis(s.omega);
 
             % get complex internal force amplitudes
-            % TODO: check if this method is correct !!!
             f = s.fem.calcInnerF(u, s.omega);
 
             % extract the values from the probe-nodes
