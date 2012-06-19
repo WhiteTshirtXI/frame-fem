@@ -22,6 +22,7 @@ classdef c_sys_fem < handle
 %
 %    N          - number of nodes
 %    nodes      - node list
+%    elements   - beam elements list
 %    nAdj       - nodes adjacancy matrix
 %
 %    bc         - boundary conditions for each node and nodal DOF
@@ -64,13 +65,15 @@ classdef c_sys_fem < handle
 %    addNodeForces  - add nodal forces and moments
 %    buildFSys      - build system force vector
 %
+%    calcInnerF     - calculate inner forces at nodes
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Author        : Felix Langfeldt
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-05-30 15:55 CEST
+% Last Modified : 2012-06-11 17:31 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -97,6 +100,10 @@ classdef c_sys_fem < handle
 
         % node list (format: [x1 z1 ; x2 z2 ; ...])
         nodes;
+
+        % beam elements list
+        % (format: {[node1 node2] [rhoA EA EI]})
+        elements = {};
 
         % nodes adjacancy matrix
         nAdj;
@@ -251,6 +258,9 @@ classdef c_sys_fem < handle
         %             the addition of every beam element to the system
         %             { [idx1 idx2] [rhoA EA EI] }
         function self = add_elements(self, p_beams)
+
+            % put elements in element list
+            self.elements = p_beams;
             
             for beam = p_beams'
 
@@ -266,14 +276,18 @@ classdef c_sys_fem < handle
         %   p_om - angular frequency of harmonic excitation forces
         function uFreq = harmonicAnalysis(self, p_om)
 
+            % pre-allocate displacement vector
+            uFreq = zeros(self.sysDOF(),1);
+
+            % mask vector for fixed DOF representation
+            bcMask = ~self.getFixedDOFs();
+
             % add frequency dependent infinite boundary conditions to
             % the diagonals of the system matrices
             KSys_f = self.KSys + diag(reshape(                       ...
-                       self.bc_inf(:,1:self.NDOF).',1,[]             ...
-                                 ));
+                                        self.bc_inf(:,1:2:end).',1,[]));
             DSys_f = self.DSys + diag(reshape(                       ...
-                       self.bc_inf(:,self.NDOF+[1:self.NDOF]).',1,[] ...
-                                 ));
+                                        self.bc_inf(:,2:2:end).',1,[]));
 
             % calculate inverse transfer matrix
             % (for a system of linear equations Ax=b this equals the
@@ -281,7 +295,7 @@ classdef c_sys_fem < handle
             HSysI = (-p_om^2*self.MSys+1j*p_om*DSys_f+KSys_f);
 
             % calculate complex displacement amplitudes via x=(A^-1)b
-            uFreq = HSysI\self.fSys;
+            uFreq(bcMask) = HSysI(bcMask,bcMask)\self.fSys(bcMask);
 
         end
 
@@ -481,8 +495,7 @@ classdef c_sys_fem < handle
         %              [K_u K_w K_beta D_u D_w D_beta]
         function self = addNodeBC_inf(self, p_i_node, p_bc)
 
-            % TODO: CURRENTLY ONLY THE TRANSVERSE DOF IS ACCOUNTED FOR!
-            self.bc_inf(p_i_node, [0:1]*self.NDOF+self.IDOF_W) = p_bc;
+            self.bc_inf(p_i_node, :) = p_bc;
 
         end
 
@@ -539,6 +552,104 @@ classdef c_sys_fem < handle
             % matrix fh in a way that it becomes a column vector with
             % sysDOF elements
             self.fSys = reshape(self.fh.',1,[]).';
+
+        end
+
+        % CALCULATE INNER FORCES AT NODES
+        %
+        % Inputs:
+        %   p_u  - nodal displacements
+        %   p_om - excitation force frequency
+        function fi_nodes = calcInnerF(self, p_u, p_om)
+
+            % number of elements connected to each node
+            nElNode = sum(self.nAdj~=0,2);
+
+            % calculate maximum number of individual elements connected
+            % to one node
+            nElMax = max(nElNode);
+
+            % allocate fi as zero-vector with sysDOF number of rows and
+            % nElMax number of columns
+            fi = zeros(self.sysDOF(),nElMax);
+
+            % allocate fi_nodes (nodal inner forces vector with
+            % recovered forces by averaging) with sysDOF number of rows
+            % and one column
+            fi_nodes = zeros(self.sysDOF(),1);
+
+            % column counter
+            fi_col = ones(self.N,1);
+
+            % run through all beam elements
+            for el = self.elements'
+
+                % element node indices
+                nIdx = el{1};
+
+                % get x- and z-coordinates of both element nodes using
+                % the index vector
+                xz12 = self.nodes(nIdx,:);
+
+                % resulting vector between both nodes
+                dxz12 = xz12(2,:) - xz12(1,:);
+
+                % calculate element length and angle
+                le    = norm(dxz12);
+                alpha = -atan2(dxz12(2), dxz12(1));
+
+                % calculate DOF index vector for node assignment of the
+                % inner forces
+                %
+                % first: multiply the element node index vector by NDOF
+                %        and substract (NDOF-1) to get the index vector
+                %        in terms of global DOF indices
+                g_idx_dof = self.NDOF*nIdx'-(self.NDOF-1);
+                
+                % second: expand the node DOF index column vector
+                %         p_idx_dof to get a matrix with NDOF columns
+                %         and two (number of element nodes) rows
+                m_idx_dof = repmat(g_idx_dof, 1, self.NDOF);
+
+                % third: expand the local DOF index vector IDOF_VEC-1 in
+                %        the same way and sum up both matrices
+                m_idx_dof = m_idx_dof + repmat(self.IDOF_VEC-1, 2, 1);
+
+                % fourth: the final dof index vector is generated by
+                %         concatenating all of the matrix' columns
+                idx_dof = m_idx_dof(:);
+                
+                % calculate nodal inner forces
+                fi_calc = beam_iForces( p_u(idx_dof), le, ...
+                                        alpha, el{2} );
+
+                % for each node, append the calculated forces to the
+                % inner force vector
+                for n = [1:2]
+
+                    rows = idx_dof(n:2:end);
+                    col  = fi_col(nIdx(n));
+
+                    fi(rows,col) = fi_calc(n:2:end);
+
+                    % increment inner force vector column counter
+                    fi_col(nIdx(n)) = col+1;
+
+                end
+
+            end
+
+            % perform stress recovery for each node
+            % TODO: check error (this is simple averaging!)
+            % see VAZ Jr. et.al. 2009
+            for n = [1:self.N]
+                
+                % indices
+                idx = n*self.NDOF+[1 2 3]-self.NDOF;
+
+                fi_nodes(idx) = mean(fi(idx,1:nElNode(n)),2);
+
+            end
 
         end
 
