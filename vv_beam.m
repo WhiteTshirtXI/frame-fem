@@ -13,7 +13,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-21 09:51 CEST
-% Last Modified : 2012-06-01 14:29 CEST
+% Last Modified : 2012-06-19 14:16 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -73,9 +73,6 @@ RHOA = RHO*A;
 EA = E*A;
 % bending rigidity (N*m^2)
 EI = E*I;
-
-% BENDING MODES ONLY -> axial rigidity to zero
-EA = 0;
 
 
 % bending wave velocities for all frequencies
@@ -143,7 +140,8 @@ for i_nel = NEL
     frame = c_frame_def(beam_nodes);
 
     % add beam to frame
-    frame.addBeam( [ 1 2 RHOA EA EI i_nel]);
+    % ONLY BENDING -> EA = 0
+    frame.addBeam( [ 1 2 RHOA 0 EI i_nel/L]);
 
     % apply boundary conditions
     frame.nodeBC_clamped(nodes_clamped);
@@ -227,7 +225,7 @@ for i_nel = NEL
         frame = c_frame_def(beam_nodes);
 
         % add beam to frame
-        frame.addBeam( [ 1 2 RHOA EA EI i_nel]);
+        frame.addBeam( [ 1 2 RHOA EA EI i_nel/L]);
 
         % add harmonic force to the first node
         frame.addHarmonicForceZ(1, F);
