@@ -19,7 +19,7 @@
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-19 14:20 CEST
-% Last Modified : 2012-06-19 14:40 CEST
+% Last Modified : 2012-07-03 14:49 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -84,8 +84,8 @@ beam_nodes = L*[ 0          0          ;
 %%% BOUNDARY CONDITIONS %%%
 % clamped nodes 
 nodes_clamped = [ 1 ];
-% jointed nodes
-nodes_jointed = [ 2 ];
+% simply supported nodes
+nodes_spprted = [ 2 ];
 
 
 %%% according to the lowest element number and the selected boundary %%%
@@ -95,7 +95,7 @@ nodes_jointed = [ 2 ];
 %                                 2 beam node DOFs - constrained dofs
 %                                 because of BCs
 maxModes_corrected = (min(NEL)+1)*2-numel(nodes_clamped)*2           ...
-                                   -numel(nodes_jointed);
+                                   -numel(nodes_spprted);
 
 if maxModes_corrected < MAXMODES
     fprintf(['CORRECTING maximum modes number to %i ...\n\n'],       ...
@@ -105,7 +105,7 @@ end
 
 
 % get reference frequencies
-f_n_ref = vv_beam_natFreq(MAXMODES, numel(nodes_jointed),            ...
+f_n_ref = vv_beam_natFreq(MAXMODES, numel(nodes_spprted),            ...
                           numel(nodes_clamped))                      ...
           *sqrt(EI/RHOA)/(L^2*2*pi);
 
@@ -136,12 +136,11 @@ for i_nel = NEL
     frame = c_frame_def(beam_nodes);
 
     % add beam to frame
-    % ONLY BENDING -> EA = 0
-    frame.addBeam( [ 1 2 RHOA 0 EI i_nel/L]);
+    frame.addBeam( [ 1 2 RHOA EA EI i_nel/L]);
 
     % apply boundary conditions
     frame.nodeBC_clamped(nodes_clamped);
-    frame.nodeBC_jointed(nodes_jointed);
+    frame.nodeBC_spprted(nodes_spprted);
 
     % discretize the system
     sys_fem = frame.discretize();
@@ -160,7 +159,7 @@ for i_nel = NEL
                     'lowest eigenmodes ...\n'], MAXMODES);
 
         % plot eigenmodes
-        sys_fem.plotModes(MAXMODES);
+        % sys_fem.plotModes(MAXMODES);
 
         % calculate eigenfrequencies
         eigF = sort(sys_fem.eigF(MAXMODES));
