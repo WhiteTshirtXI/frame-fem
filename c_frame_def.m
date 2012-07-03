@@ -38,7 +38,8 @@ classdef c_frame_def < handle
 %                        return sys_fem-class
 %
 %    nodeBC_clamped    - apply clamped boundary condition to frame nodes
-%    nodeBC_jointed    - apply jointed boundary condition to frame nodes
+%    nodeBC_spprted    - apply simply supported boundary condition to
+%                        frame nodes
 %    nodeBC_infinite   - apply infinite element boundary condition to
 %                        frame nodes (WANG & LAI 1999)
 %
@@ -52,7 +53,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-06-08 09:51 CEST
+% Last Modified : 2012-07-03 10:24 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -97,19 +98,19 @@ classdef c_frame_def < handle
         %
         % Inputs:
         %   p_nodes - x- and z-coordinate vector of the frame nodes
-        function self = c_frame_def( p_nodes )
+        function s = c_frame_def( p_nodes )
 
-            self.frame_nodes = p_nodes;
+            s.frame_nodes = p_nodes;
     
             % initialize nodes index vector as empty
-            self.frame_nodes_idx = zeros(size(self.frame_nodes,1),1);
+            s.frame_nodes_idx = zeros(size(s.frame_nodes,1),1);
 
             % initialize boundary conditions vectors as empty
-            self.frame_nodes_bc = zeros(size(p_nodes,1),3);
-            self.frame_inf_bc = zeros(size(p_nodes,1),6);
+            s.frame_nodes_bc = zeros(size(p_nodes,1),3);
+            s.frame_inf_bc = zeros(size(p_nodes,1),6);
 
             % initialize nodal forces and moments as empty
-            self.frame_fh = zeros(size(p_nodes,1),3);
+            s.frame_fh = zeros(size(p_nodes,1),3);
 
         end
 
@@ -120,167 +121,101 @@ classdef c_frame_def < handle
         %             contains a beam spec-vector with the following
         %             data:
         %             [ startNodeID endNodeID rhoA EA EI elDensity ]
-        function self = addBeam( self, p_beams )
+        function s = addBeam( s, p_beams )
 
             % calculate number of elements on each beam via the
             % specified element density
 
             % beam node indices
-            bIdx = p_beams(:,[self.IDXB_FIRSTNODE self.IDXB_LASTNODE]);
+            bIdx = p_beams(:,[s.IDXB_FIRSTNODE s.IDXB_LASTNODE]);
 
             % beam lengths in x- and z-direction as a difference between
             % the last and first node x- and z-coordinate
-            bLx = self.frame_nodes(bIdx(:,2),1)- ...
-                  self.frame_nodes(bIdx(:,1),1);
-            bLz = self.frame_nodes(bIdx(:,2),2)- ...
-                  self.frame_nodes(bIdx(:,1),2);
+            bLx = s.frame_nodes(bIdx(:,2),1)- ...
+                  s.frame_nodes(bIdx(:,1),1);
+            bLz = s.frame_nodes(bIdx(:,2),2)- ...
+                  s.frame_nodes(bIdx(:,1),2);
 
             % number of elements = beam length * element density
-            p_beams(:,self.IDXB_NELEMENTS) = ceil( ...
-                   sqrt(bLx.^2+bLz.^2).*p_beams(:,self.IDXB_NELEMENTS));
+            p_beams(:,s.IDXB_NELEMENTS) = ceil( ...
+                   sqrt(bLx.^2+bLz.^2).*p_beams(:,s.IDXB_NELEMENTS));
 
 
-            self.frame_beams = [self.frame_beams ; p_beams];
+            s.frame_beams = [s.frame_beams ; p_beams];
 
         end
 
         % DISCRETIZE THE FRAME STRUCTURE USING FEM AND RETURN
         % SYS_FEM-CLASS
-        function sys_fem = discretize( self )
+        function sys_fem = discretize( s )
+
+            % re-initialize frame nodes index vector
+            s.frame_nodes_idx = zeros(size(s.frame_nodes,1),1);
 
             % calculate number of system nodes
-            N = size(self.frame_nodes,1) + ...
-                sum(self.frame_beams(:,self.IDXB_NELEMENTS)-1);
+            N = size(s.frame_nodes,1) + ...
+                sum(s.frame_beams(:,s.IDXB_NELEMENTS)-1);
 
             % calculate number of system elements
-            NEl = sum(self.frame_beams(:,self.IDXB_NELEMENTS));
+            NEl = sum(s.frame_beams(:,s.IDXB_NELEMENTS));
 
-            % allocate system nodes-vector
-            sys_nodes = zeros(N, 2);
+            % initialize fem-system class
+            sys_fem = c_sys_fem(N, NEl);
 
-            % allocate system elements-cell array
-            % each row contains: { [elNode1 elNode2], [rhoA EA EI] }
-            sys_elements = cell(NEl, 2);
-
-            % this vector contains the information of frame nodes, which
-            % have already been added to the system nodes-vector and
-            % what index they have
-            % an index of 0 means, the frame node hasn't been assigned
-            % already
-            self.frame_nodes_idx = zeros(size(self.frame_nodes,1),1);
-
-            % node counter, starting with 1
-            i_node = 1;
-
-            % element counter, starting with 1
-            i_element = 1;
-
-            % calculate nodes coordinates for each beam
-            for beam = self.frame_beams'
+            % for each frame beam add nodes and elements to the
+            % fem-system class
+            for beam = s.frame_beams.'
 
                 % beam first and last frame node index
-                beamFirstNode = beam(self.IDXB_FIRSTNODE);
-                beamLastNode = beam(self.IDXB_LASTNODE);
+                beamFirstNode = beam(s.IDXB_FIRSTNODE);
+                beamLastNode = beam(s.IDXB_LASTNODE);
 
                 % beam number of elements
-                beamNEl = beam(self.IDXB_NELEMENTS);
+                beamNEl = beam(s.IDXB_NELEMENTS);
 
                 % beam geometrical and material properties
-                beamRhoA = beam(self.IDXB_RHOA);
-                beamEA = beam(self.IDXB_EA);
-                beamEI = beam(self.IDXB_EI);
+                beamRhoA = beam(s.IDXB_RHOA);
+                beamEA = beam(s.IDXB_EA);
+                beamEI = beam(s.IDXB_EI);
                 
                 % start and end node coordinates
-                xzStart = self.frame_nodes(beamFirstNode,:);
-                xzEnd   = self.frame_nodes(beamLastNode,:);
-                
-                % check if the first frame node already hasn't been
-                % assigned to the node indices of the discretized system
-                if self.frame_nodes_idx(beamFirstNode) == 0
-                    % add start node coordinates to system nodes vector
-                    sys_nodes(i_node,:) = xzStart;
-                    % mark first beam node as 'assigned'
-                    self.frame_nodes_idx(beamFirstNode) = i_node;
-                    % increment node counter by one
-                    i_node = i_node + 1;
-                end
+                xStart = s.frame_nodes(beamFirstNode,1);
+                xEnd   = s.frame_nodes(beamLastNode,1);
+                zStart = s.frame_nodes(beamFirstNode,2);
+                zEnd   = s.frame_nodes(beamLastNode,2);
 
-                % beam vector between start and end node
-                xzBeam = xzEnd - xzStart;
+                % length and orientation angle
+                l = sqrt((xEnd-xStart)^2+(zEnd-zStart)^2);
+                a = -atan2(zEnd-zStart,xEnd-xStart);
 
-                % first element node index
-                elNode1 = self.frame_nodes_idx(beamFirstNode);
+                % beam node coordinates
+                xNodes = linspace(xStart,xEnd,beamNEl+1);
+                zNodes = linspace(zStart,zEnd,beamNEl+1);
 
-                % run through sub-nodes for the current beam
-                for i_subNode = 1:(beamNEl-1)
+                % add nodes to fem-system class and get indices
+                nodeIdx = sys_fem.addNodes(xNodes, zNodes);
 
-                    % calculate sub-node-coordinates
-                    xzSubNode = xzStart + i_subNode*xzBeam/beamNEl;
+                % insert beam elements with constant properties between
+                % these nodes
+                sys_fem.addElBeamConst(nodeIdx, l/beamNEl, a,       ...
+                                       beamRhoA, beamEA, beamEI);
 
-                    % add sub-node to system nodes vector
-                    sys_nodes(i_node,:) = xzSubNode;
+                % update frame nodes indices
+                s.frame_nodes_idx([beamFirstNode beamLastNode]) = ...
+                                                       nodeIdx([1 end]);
 
-                    % second element node index
-                    elNode2 = i_node;
-
-                    % increment node counter by one
-                    i_node = i_node + 1;
-
-                    % add element data to system elements-cell vector
-                    sys_elements(i_element,:) = {[elNode1 elNode2] ...
-                                                 [beamRhoA beamEA ...
-                                                  beamEI] };
-
-                    % increment element counter by one
-                    i_element = i_element + 1;
-
-                    % switch first and second element node index
-                    elNode1 = elNode2;
-
-                end
-                
-                % check if the last frame node already hasn't been
-                % assigned to the node indices of the discretized system
-                if self.frame_nodes_idx(beamLastNode) == 0
-                    % add start node coordinates to system nodes vector
-                    sys_nodes(i_node,:) = xzEnd;
-                    % mark first beam node as 'assigned'
-                    self.frame_nodes_idx(beamLastNode) = i_node;
-                    % increment node counter by one
-                    i_node = i_node + 1;
-                end
-
-                % second element node index
-                elNode2 = self.frame_nodes_idx(beamLastNode);
-
-                % add element data to system elements-cell vector
-                sys_elements(i_element,:) = {[elNode1 elNode2] ...
-                                             [beamRhoA beamEA beamEI] };
-
-                % increment element counter by one
-                i_element = i_element + 1;
-
-            end
-
-            % initialize fem-system class using the node list
-            sys_fem = c_sys_fem(sys_nodes);
+            end % beam loop
 
             % apply nodal boundary conditions
-            sys_fem.addNodeBC(self.frame_nodes_idx, ...
-                              self.frame_nodes_bc);
+            sys_fem.addNodeBC(s.frame_nodes_idx, ...
+                              s.frame_nodes_bc);
 
             % apply nodal boundary conditions for infinite elements
-            sys_fem.addNodeBC_inf(self.frame_nodes_idx, ...
-                                  self.frame_inf_bc);
+            sys_fem.addNodeBC_inf(s.frame_nodes_idx, ...
+                                  s.frame_inf_bc);
 
             % add harmonic force amplitudes to system
-            sys_fem.addNodeForces(self.frame_nodes_idx, self.frame_fh);
-
-            % buld force vector
-            sys_fem.buildFSys();
-
-            % add all beam elements to the fem system
-            sys_fem.add_elements(sys_elements);
+            sys_fem.addNodeForces(s.frame_nodes_idx, s.frame_fh);
 
         end
 
@@ -288,22 +223,23 @@ classdef c_frame_def < handle
         %
         % Inputs:
         %   p_nodes - node indices of the nodes which need to be clamped
-        function self = nodeBC_clamped( self, p_nodes )
+        function s = nodeBC_clamped( s, p_nodes )
 
             for node = p_nodes
-                self.frame_nodes_bc(node,:) = [1 1 1];
+                s.frame_nodes_bc(node,:) = [1 1 1];
             end
 
         end
 
-        % APPLY JOINTED BOUNDARY CONDITION TO FRAME NODES
+        % APPLY SIMPLY SUPPORTED BOUNDARY CONDITION TO FRAME NODES
         %
         % Inputs:
-        %   p_nodes - node indices of the nodes which need to be joint
-        function self = nodeBC_jointed( self, p_nodes )
+        %   p_nodes - node indices of the nodes which need to be simply
+        %             supported
+        function s = nodeBC_spprted( s, p_nodes )
 
             for node = p_nodes
-                self.frame_nodes_bc(node,:) = [1 1 0];
+                s.frame_nodes_bc(node,:) = [1 1 0];
             end
 
         end
@@ -315,10 +251,10 @@ classdef c_frame_def < handle
         %   p_nodes - node indices of the nodes where the infinite
         %             elements need to be attached
         %   p_omega - angular frequency of excitation
-        function self = nodeBC_infinite( self, p_nodes, p_omega )
+        function s = nodeBC_infinite( s, p_nodes, p_omega )
             
             % clear boundary condition vector
-            self.frame_inf_bc = zeros(size(self.frame_nodes,1),6);
+            s.frame_inf_bc = zeros(size(s.frame_nodes,1),6);
 
             for node = p_nodes
 
@@ -328,14 +264,13 @@ classdef c_frame_def < handle
                 
                 % find firstmost beam ID which is connected to the
                 % specified node
-                [beamID,beamIDcol] = find(                           ...
-                   self.frame_beams(:,[self.IDXB_FIRSTNODE          ...
-                                       self.IDXB_LASTNODE]) == node,1);
+                [beamID,~] = find(s.frame_beams(:,[s.IDXB_FIRSTNODE  ...
+                                           s.IDXB_LASTNODE]) == node,1);
 
                 % calculate wave numbers for the beam
-                beamRhoA = self.frame_beams(beamID,self.IDXB_RHOA);
-                beamEA   = self.frame_beams(beamID,self.IDXB_EA);
-                beamEI   = self.frame_beams(beamID,self.IDXB_EI);
+                beamRhoA = s.frame_beams(beamID,s.IDXB_RHOA);
+                beamEA   = s.frame_beams(beamID,s.IDXB_EA);
+                beamEI   = s.frame_beams(beamID,s.IDXB_EI);
 
                 % longitudinal wave number
                 kL = p_omega*sqrt(beamRhoA/beamEA);
@@ -352,7 +287,7 @@ classdef c_frame_def < handle
                 bcDB = bcKB/p_omega;
 
                 % add to boundary condition vector
-                self.frame_inf_bc(node,:) = [ bcKL bcDL bcKB bcDB 0 0 ];
+                s.frame_inf_bc(node,:) = [ bcKL bcDL bcKB bcDB 0 0 ];
 
             end
 
@@ -364,10 +299,10 @@ classdef c_frame_def < handle
         %   p_nodes  - node indices of the nodes where an external
         %              harmonic force is applied
         %   p_F      - force amplitudes magnitude, [ Fx ; Fz ; My ]
-        function self = addHarmonicForce( self, p_nodes, p_F )
+        function s = addHarmonicForce( s, p_nodes, p_F )
 
             for node = p_nodes
-                self.frame_fh(node,:) = p_F.';
+                s.frame_fh(node,:) = p_F.';
             end
 
         end
@@ -378,9 +313,9 @@ classdef c_frame_def < handle
         %   p_nodes  - node indices of the nodes where an external
         %              harmonic force in x-direction is applied
         %   p_F      - force amplitude magnitude
-        function self = addHarmonicForceX( self, p_nodes, p_F )
+        function s = addHarmonicForceX( s, p_nodes, p_F )
 
-            self.addHarmonicForce(p_nodes, [p_F ; 0 ; 0]);
+            s.addHarmonicForce(p_nodes, [p_F ; 0 ; 0]);
 
         end
 
@@ -390,9 +325,9 @@ classdef c_frame_def < handle
         %   p_nodes  - node indices of the nodes where an external
         %              harmonic force in z-direction is applied
         %   p_F      - force amplitude magnitude
-        function self = addHarmonicForceZ( self, p_nodes, p_F )
+        function s = addHarmonicForceZ( s, p_nodes, p_F )
 
-            self.addHarmonicForce(p_nodes, [0 ; p_F ; 0]);
+            s.addHarmonicForce(p_nodes, [0 ; p_F ; 0]);
 
         end
 

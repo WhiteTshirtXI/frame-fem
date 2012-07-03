@@ -14,58 +14,34 @@ classdef c_sys_fem < handle
 %
 % Properties :
 %    NDOF       - number of DOFs per node
-%    IDOF_U     - DOF index for x-translation
-%    IDOF_W     - DOF index for z-translation
-%    IDOF_B     - DOF index for rotation around y-axis
 %
-%    IDOF_VEC   - node DOF index vector
+%    nodes      - nodes
+%    el_beams   - beam elements
 %
-%    N          - number of nodes
-%    nodes      - node list
-%    elements   - beam elements list
-%    nAdj       - nodes adjacancy matrix
-%
-%    bc         - boundary conditions for each node and nodal DOF
 %    bc_inf     - infinite boundary conditions for each node
-%    fh         - harmonic force amplitudes for each node
-%
-%    MSys       - system mass matrix
-%    DSys       - system damping matrix
-%    KSys       - system stiffness matrix
-%    fSys       - system nodal force vector
 %
 %    eigVal     - matrix of eigenvalues of the system
 %    eigVec     - matrix of eigenvectors of the system
 %    eigRecalc  - recalculation of eigenvalues required
 %
-%    plot_nodes - nodes plotting class
-%
 % Methods :
-%    c_sys_fem      - constructor
-%    sysDOF         - return overall system degrees of freedom
-%    add_element    - add beam element
-%    add_elements   - add multiple beam elements
+%    c_sys_fem       - constructor
+%    sysDOF          - return overall system degrees of freedom
+%    addNodes        - add nodes
+%    addElBeam       - add beam element(s)
+%    addElBeamComst  - add beam elements with constant properties
+%                      between nodes
 %
-%    eigCalc        - calculate eigenvalues and eigenvectors
-%    eigOmega       - calculate the angular eigenfrequencies
-%    eigF           - calculate the eigenfrequencies
+%    harmonicAnalysis - do a harmonic analysis in frequency domain
+%    eigCalc         - calculate eigenvalues and eigenvectors
+%    eigOmega        - calculate angular eigenfrequencies
+%    eigF            - calculate eigenfrequencies
 %
-%    getModes       - return eigenmodes
-%    getAllModes    - return all eigenmodes
-%    removeModes    - remove eigenmodes with an eigenfrequency below a
-%                     certain tolerance
-%    plotModes      - plot eigenmodes
-%    addNodeBC      - add nodal boundary condition
-%    addNodeBC_inf  - add nodal boundary condition for infinite elements
-%    nodeBC_clamped - clamped nodal BC (all three DOFs fixed)
-%    nodeBC_jointed - jointed nodal BC (rotational DOF free)
+%    addNodeBC       - add nodal boundary condition
+%    addNodeBC_inf   - add nodal boundary condition for infinite
+%                      elements
 %
-%    getFixedDOFs   - return vector of fixed dofs
-%
-%    addNodeForces  - add nodal forces and moments
-%    buildFSys      - build system force vector
-%
-%    calcInnerF     - calculate inner forces at nodes
+%    addNodeForces   - add nodal forces and moments
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -73,7 +49,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-06-11 17:31 CEST
+% Last Modified : 2012-07-03 14:11 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -84,46 +60,14 @@ classdef c_sys_fem < handle
         % are supported)
         NDOF = 3;
 
-        % DOF indices (currently unused)
-        %  u    -> 1
-        %  w    -> 2
-        %  beta -> 3
-        IDOF_U = 1;
-        IDOF_W = 2;
-        IDOF_B = 3;
-
-        % node DOF index vector
-        IDOF_VEC;
-
-        % overall number of nodes
-        N = 0;
-
-        % node list (format: [x1 z1 ; x2 z2 ; ...])
+        % nodes class
         nodes;
 
-        % beam elements list
-        % (format: {[node1 node2] [rhoA EA EI]})
-        elements = {};
-
-        % nodes adjacancy matrix
-        nAdj;
-
-        % boundary conditions for each node and nodal DOF
-        bc;
+        % beam elements class
+        el_beams;
 
         % infinite boundary conditions for each node
         bc_inf;
-
-        % harmonic force amplitudes for each node
-        fh;
-
-        % system mass, damping and stiffness matrices
-        MSys;
-        DSys;
-        KSys;
-
-        % system nodal force vector
-        fSys;
 
         % eigenvalues and -vectors
         eigVal;
@@ -131,9 +75,6 @@ classdef c_sys_fem < handle
 
         % recalculation of eigenvalues required
         eigRecalc = true;
-
-        % nodes plotting class
-        plot_nodes;
 
     end
 
@@ -143,130 +84,85 @@ classdef c_sys_fem < handle
         % CONSTRUCTOR
         %
         % Inputs:
-        %   p_nodes - x- and z-coordinate vector of the system nodes
-        function self = c_sys_fem( p_nodes )
+        %   p_n        - (maximum) number of nodes
+        %   p_nElBeams - (maximum) number of beam elements
+        function s = c_sys_fem( p_n , p_nElBeams )
 
-            self.nodes = p_nodes;
-
-            % the number of system nodes equals the number of rows of
-            % the array p_nodes
-            self.N     = size(p_nodes, 1);
-
-            % allocate memory for the adjacancy matrix
-            self.nAdj = sparse(self.N,self.N);
-
-            % initialize all boundary conditions to zero (non-fixed)
-            self.bc = sparse(self.N,self.NDOF);
+            % initialize nodes and element classes
+            s.nodes = c_fem_nodes( p_n );
+            s.el_beams = c_fem_el_beams( p_nElBeams );
 
             % initialize infinite bcs to zero
-            self.bc_inf = sparse(self.N,2*self.NDOF);
-
-            % initialize force amplitudes to zero
-            self.fh = sparse(self.N,self.NDOF);
+            s.bc_inf = sparse(p_n,2*s.NDOF);
 
             % overall degrees of freedom
-            sysDOF = self.sysDOF();
-
-            % create node DOF index vector
-            self.IDOF_VEC = [1:self.NDOF];
-
-            % allocate memory for the system matrices and vectors
-            self.MSys  = sparse(sysDOF,sysDOF);
-            self.DSys  = sparse(sysDOF,sysDOF);
-            self.KSys  = sparse(sysDOF,sysDOF);
-            self.fSys  = sparse(sysDOF,sysDOF);
+            sysDOF = s.sysDOF();
 
             % allocate memory for the eigenvalue matrices
-            % self.eigVal = spalloc(sysDOF,sysDOF,sysDOF);
-            self.eigVal = zeros(sysDOF);
-            self.eigVec = zeros(sysDOF);
-
-            % create plot nodes class
-            self.plot_nodes = c_plot_nodes(p_nodes);
+            s.eigVal = zeros(sysDOF);
+            s.eigVec = zeros(sysDOF);
 
         end
 
         % RETURN OVERALL SYSTEM DEGREES OF FREEDOM
-        function sysDOF = sysDOF(self)
+        function sysDOF = sysDOF(s)
 
-            sysDOF = self.N * self.NDOF;
+            sysDOF = s.nodes.n()*s.NDOF;
 
         end
 
-        % ADD BEAM ELEMENT
+        % ADD NODES
         %
         % Inputs:
-        %   p_idx   - node indices [idx1 idx2]
-        %   p_bProp - element properties [rhoA EA EI]
-        function self = add_element(self, p_idx, p_bProp)
+        %   p_x - node x-coordinate(s)
+        %   p_z - node z-coordinate(s)
+        function idx = addNodes( s, p_x, p_z )
 
-            % get x- and z-coordinates of both element nodes using the
-            % index vector
-            xz12 = self.nodes(p_idx,:);
-
-            % resulting vector between both nodes
-            dxz12 = xz12(2,:) - xz12(1,:);
-
-            % calculate element length and angle
-            le    = norm(dxz12);
-            alpha = -atan2(dxz12(2), dxz12(1));
-
-            % calculate element matrices
-            [ Me, Ke ] = matrices_beam( le, alpha, p_bProp );
-
-            % calculate DOF index vector for matrix summation to system
-            % matrix
-            %
-            % first: multiply the element node index vector by NDOF and
-            %        substract (NDOF-1) to get the index vector in terms
-            %        of global DOF indices
-            g_idx_dof = self.NDOF*p_idx'-(self.NDOF-1);
+            idx = s.nodes.addNode(p_x, p_z);
             
-            % second: expand the node DOF index column vector p_idx_dof
-            %         to get a matrix with NDOF columns and two (number
-            %         of element nodes) rows
-            m_idx_dof = repmat(g_idx_dof, 1, self.NDOF);
+            % a recalculation of eigenvalues is required
+            s.eigRecalc = true;
 
-            % third: expand the local DOF index vector IDOF_VEC-1 in the
-            %        same way and sum up both matrices
-            m_idx_dof = m_idx_dof + repmat(self.IDOF_VEC-1, 2, 1);
+        end
 
-            % fourth: the final dof index vector is generated by
-            %         concatenating all of the matrix' columns
-            idx_dof = m_idx_dof(:);
-
-            % using these index vectors, add the element matrices to the
-            % system matrices
-            self.MSys(idx_dof,idx_dof) = self.MSys(idx_dof,idx_dof) + Me;
-            self.KSys(idx_dof,idx_dof) = self.KSys(idx_dof,idx_dof) + Ke;
-
-
-            % the system matrices have changed, so a recalculation of
-            % the eigenvalues is required
-            self.eigRecalc = true;
-
-            % add entries to adjacancy matrix according to the node
-            % indices
-            self.nAdj(p_idx,p_idx) = ~eye(2);
-
-        end 
-
-        % ADD MULTIPLE BEAM ELEMENTS
+        % ADD BEAM ELEMENT(S)
         %
         % Inputs:
-        %   p_beams - cell-array containing all the data necessary for
-        %             the addition of every beam element to the system
-        %             { [idx1 idx2] [rhoA EA EI] }
-        function self = add_elements(self, p_beams)
+        %   p_n1   - first node index
+        %   p_n2   - second node index
+        %   p_l    - element length
+        %   p_a    - element orientation angle 
+        %   p_rhoA - mass loading
+        %   p_EA   - axial stiffness
+        %   p_EI   - bending stiffness
+        function s = addElBeam(s, p_n1, p_n2, p_l, p_a,        ...
+                                                     p_rhoA, p_EA, p_EI)
 
-            % put elements in element list
-            self.elements = p_beams;
+            s.el_beams.addBeam(p_n1, p_n2, p_l, p_a, p_rhoA, p_EA,...
+                                                                  p_EI);
             
-            for beam = p_beams'
+            % a recalculation of eigenvalues is required
+            s.eigRecalc = true;
 
-                self.add_element(beam{1},beam{2});
+        end
 
-            end
+        % ADD BEAM ELEMENTS WITH CONSTANT PROPERTIES BETWEEN NODES
+        %
+        % Inputs:
+        %   p_n    - node indices
+        %   p_l    - element length (scalar)
+        %   p_a    - element orientation angle (scalar)
+        %   p_rhoA - mass loading (scalar)
+        %   p_EA   - axial stiffness (scalar)
+        %   p_EI   - bending stiffness (scalar)
+        function s = addElBeamConst(s, p_n, p_l, p_a, p_rhoA,  ...
+                                                             p_EA, p_EI)
+
+            s.el_beams.addBeamConst(p_n, p_l, p_a, p_rhoA, p_EA,  ...
+                                                                  p_EI);
+            
+            % a recalculation of eigenvalues is required
+            s.eigRecalc = true;
 
         end
 
@@ -274,203 +170,91 @@ classdef c_sys_fem < handle
         %
         % Inputs:
         %   p_om - angular frequency of harmonic excitation forces
-        function uFreq = harmonicAnalysis(self, p_om)
+        function u = harmonicAnalysis(s, p_om)
+
+            % get index vector of free (non-fixed) nodes
+            idx = s.nodes.idxFreeDOFs();
 
             % pre-allocate displacement vector
-            uFreq = zeros(self.sysDOF(),1);
+            u = zeros(3,s.nodes.iln);
 
-            % mask vector for fixed DOF representation
-            bcMask = ~self.getFixedDOFs();
+            % assemble system matrices
+            [MSys,KSys] = s.el_beams.mSys();
+            DSys = sparse(s.sysDOF(),s.sysDOF());
 
             % add frequency dependent infinite boundary conditions to
             % the diagonals of the system matrices
-            KSys_f = self.KSys + diag(reshape(                       ...
-                                        self.bc_inf(:,1:2:end).',1,[]));
-            DSys_f = self.DSys + diag(reshape(                       ...
-                                        self.bc_inf(:,2:2:end).',1,[]));
+            KSys = KSys + diag(reshape(s.bc_inf(:,1:2:end).',1,[]));
+            DSys = DSys + diag(reshape(s.bc_inf(:,2:2:end).',1,[]));
 
             % calculate inverse transfer matrix
             % (for a system of linear equations Ax=b this equals the
             % matrix A!)
-            HSysI = (-p_om^2*self.MSys+1j*p_om*DSys_f+KSys_f);
+            HSysI = (-p_om^2*MSys+1j*p_om*DSys+KSys);
 
             % calculate complex displacement amplitudes via x=(A^-1)b
-            uFreq(bcMask) = HSysI(bcMask,bcMask)\self.fSys(bcMask);
+            u(idx) = HSysI(idx,idx)\s.nodes.f(idx);
 
         end
 
-        % CALCULATE EIGENVALUES
-        function self = eigCalc(self)
-
-            % check if eigenvalue recalculation is neccessary
-            if(self.eigRecalc)
-
-                sysDOF = self.sysDOF();
-
-                % mask vector for fixed DOF representation
-                bcMask = ~self.getFixedDOFs();
-
-                % number of non-fixed DOFs
-                bcNFree = nnz(bcMask);
-
-                % initialize eigenvector and eigenvalue matrices as zero
-                self.eigVec = zeros(sysDOF,bcNFree);
-                self.eigVal = zeros(bcNFree);
-
-                % WORKAROUND : using full() to convert the sparse system
-                %              matrices to full matrices
-                [self.eigVec(bcMask,:),self.eigVal] =                ...
-                                eig( full(self.KSys(bcMask,bcMask)), ...
-                                    -full(self.MSys(bcMask,bcMask)));
-
-                self.eigRecalc = false;
-
+        % CALCULATE EIGENVALUES AND EIGENVECTORS
+        %
+        % Inputs:
+        %   p_n - number of eigenmodes to be returned.
+        %         OPTIONAL: if non-existent, all eigenmodes will be
+        %         returned
+        function s = eigCalc(s, p_n)
+            
+            % check if the parameter p_n has been specified
+            if ~exist('p_n','var')
+                p_n = s.sysDOF()-1;
             end
+                
+            % get index vector of free (non-fixed) nodes
+            idx = s.nodes.idxFreeDOFs();
+
+            % number of free (non-fixed) DOFs
+            bcNFree = numel(idx);
+
+            % initialize eigenvector and eigenvalue matrices as zero
+            s.eigVec = zeros(bcNFree,p_n);
+            s.eigVal = zeros(bcNFree);
+
+            % assemble system matrices
+            [MSys,KSys] = s.el_beams.mSys();
+
+            % calculate eigenvaues and eigenvectors
+            [s.eigVec(idx,:),s.eigVal] = eigs(  KSys(idx,idx), ...
+                                                     -MSys(idx,idx), ...
+                                                      p_n, 'sm');
 
         end
 
         % CALCULATE ANGULAR EIGENFREQUENCIES
         %
         % Inputs:
-        %   p_nModes - number of eigenfrequencies to be returned (may be
-        %              ommited to return all eigenfrequencies!)
-        function omega = eigOmega(self, p_nModes)
+        %   p_n - number of eigenmodes to be returned.
+        %         OPTIONAL: if non-existent, all eigenmodes will be
+        %         returned
+        function omega = eigOmega(s, p_n)
 
-            % check if the parameter p_nModes has been specified
-            if exist('p_nModes')
-                [lambda,V] = self.getModes(p_nModes);
-            else
-                [lambda,V] = self.getAllModes();
-            end
-
+            % calculate eigenvectors and eigenfrequencies
+            s.eigCalc(p_n);
+            
             % return vector of angular eigenfrequencies
-            omega = imag(sqrt(lambda));
+            omega = imag(sqrt(diag(s.eigVal)));
 
         end
 
         % CALCULATE EIGENFREQUENCIES
         %
         % Inputs:
-        %   p_nModes - number of eigenfrequencies to be returned (may be
-        %              ommited to return all eigenfrequencies!)
-        function f = eigF(self, p_nModes)
+        %   p_n - number of eigenmodes to be returned.
+        %         OPTIONAL: if non-existent, all eigenmodes will be
+        %         returned
+        function f = eigF(s, p_n)
 
-            % check if the parameter p_nModes has been specified
-            if exist('p_nModes')
-                f = self.eigOmega(p_nModes)./(2*pi);
-            else
-                f = self.eigOmega()./(2*pi);
-            end
-
-        end
-
-        % RETURN EIGENMODES
-        %
-        % Inputs:
-        %   p_nModes - number of modes to be returned
-        function [lambda,V] = getModes(self, p_nModes)
-
-            % if neccessary, recalc the eigenmodes
-            self.eigCalc();
-
-            % clean up eigenmodes
-            [lambda_c,V_c,nDel] = self.removeModes();
-
-            % the eigenvalues are fetched in the order from lowest value
-            % to highest value. the lowest eigenvalue is located in the
-            % last cell of the eigenvalue-matrix, so the index of the
-            % highest eigenvalue needs to be calculated according to
-            % p_nModes.
-            idx_maxLambda = max(size(self.eigVal,1)-nDel-p_nModes+1,1);
-
-            % eigenvalues vector
-            lambda = flipud(diag(lambda_c(idx_maxLambda:end, ...
-                                          idx_maxLambda:end)));
-
-            % corresponding eigenvectors
-            V = fliplr(V_c(:,idx_maxLambda:end));
-
-        end
-
-        % RETURN ALL EIGENMODES
-        function [lambda,V] = getAllModes(self)
-
-            [lambda,V] = self.getModes(self.sysDOF());
-
-        end
-
-        % REMOVE EIGENMODES WITH AN EIGENFREQUENCY BELOW A CERTAIN
-        % TOLERANCE
-        function [lambda,V,nDel] = removeModes(self)
-
-            % minimum frequency
-            OMEGA_MIN = 1*2*pi;
-
-            % calculate eigenfrequencies
-            freq = imag(sqrt(diag(self.eigVal)));
-
-            % create mask vector by checking if the frequencies are
-            % above the speciefied frequency threshold
-            mask = freq > OMEGA_MIN;
-
-            % remove the affected rows and columns using the mask vector
-            lambda = self.eigVal(mask,mask);
-            % in the eigenvector matrix only the affected colors have to
-            % be removed
-            V = self.eigVec(:,mask);
-
-            % number of deleted elements
-            nDel = nnz(~mask);
-
-        end
-
-        % PLOT EIGENMODES
-        %
-        % Inputs:
-        %   p_nModes - number of modes to be plotted
-        function self = plotModes(self, p_nModes)
-
-            % if neccessary, recalc the eigenmodes
-            self.eigCalc();
-
-            % get modes
-            [lambda, V] = self.getModes(p_nModes);
-
-            % number of acquired modes equals number of columns in V
-            nModes = size(V, 2);
-
-            % allocate nodal displacement matrix with Nx(2*nModes)
-            % cells
-            nodeDisplacements = zeros(self.N, 2*nModes);
-
-            % assemble nodal displacement matrix
-            % first: insert all x-displacements in the eigenvector to
-            %        every odd column of the nodal displacement matrix
-            nodeDisplacements(:,1:2:end) = V(1:self.NDOF:end,:);
-
-            % second: insert all z-displacements in the eigenvector to
-            %         every even column of the nodal displacement matrix
-            nodeDisplacements(:,2:2:end) = V(2:self.NDOF:end,:);
-
-            % create titles for each subplot
-            
-            % calculate frequency
-            f = imag(sqrt(lambda))/(2*pi);
-            % mode numbers
-            mNumbers = [1:nModes]';
-
-            % concatenate both
-            titleNumbers = [mNumbers f]';
-
-            % format titles
-            titles = strread(sprintf('Mode %i : f = %8.2f Hz\n', ...
-                                     titleNumbers), '%s',        ...
-                             'delimiter', '\n');
-
-            % call the plotDisplaced-method of the plot_nodes-class
-            self.plot_nodes.plotDisplaced(self.nodes, ...
-                                          nodeDisplacements, ...
-                                          self.nAdj, titles);
+            f = s.eigOmega(p_n)./(2*pi);
 
         end
 
@@ -480,9 +264,9 @@ classdef c_sys_fem < handle
         %   p_i_node - node index the BC is to be applied to
         %   p_bc     - bcs for each DOF (1 = clamped, 0 = free)
         %              [bc_u bc_w bc_beta]
-        function self = addNodeBC(self, p_i_node, p_bc)
+        function s = addNodeBC(s, p_i_node, p_bc)
 
-            self.bc(p_i_node, :) = p_bc;
+            s.nodes.fixNode( p_i_node, p_bc.' );
 
         end
 
@@ -493,43 +277,9 @@ classdef c_sys_fem < handle
         %   p_bc     - spring stiffness and damping coefficient
         %              for each DOF
         %              [K_u K_w K_beta D_u D_w D_beta]
-        function self = addNodeBC_inf(self, p_i_node, p_bc)
+        function s = addNodeBC_inf(s, p_i_node, p_bc)
 
-            self.bc_inf(p_i_node, :) = p_bc;
-
-        end
-
-        % CLAMPED NODAL BC (ALL 3 DOFS FIXED)
-        %
-        % Inputs:
-        %   p_i_node - node index the BC is to be applied to
-        function self = nodeBC_clamped(self, p_i_node)
-
-            self.addNodeBC(p_i_node, [1 1 1]);
-
-        end
-
-        % JOINTED NODAL BC (ROTATIONAL DOF FREE)
-        %
-        % Inputs:
-        %   p_i_node - node index the BC is to be applied to
-        function self = nodeBC_jointed(self, p_i_node)
-
-            self.addNodeBC(p_i_node, [1 1 0]);
-
-        end
-
-        % RETURN VECTOR OF FIXED DOFS
-        function fixedDOFs = getFixedDOFs(self)
-
-            % 1 -> DOF is fixed
-            % 0 -> DOF is free
-
-            % assemble fixed dof vector by taking the transpose of the
-            % bc matrix ...
-            fixedDOFs = self.bc';
-            % ... and concatenate all columns
-            fixedDOFs = fixedDOFs(:);
+            s.bc_inf(p_i_node, :) = p_bc;
 
         end
 
@@ -539,117 +289,9 @@ classdef c_sys_fem < handle
         %   p_i_node - node index the force is acting on
         %   p_f      - forces for each DOF
         %              [f_x f_z m_xz]
-        function self = addNodeForces(self, p_i_node, p_f)
+        function s = addNodeForces(s, p_i_node, p_f)
 
-            self.fh(p_i_node,:) = p_f;
-
-        end
-
-        % BUILD SYSTEM FORCE VECTOR
-        function self = buildFSys(self)
-
-            % build system force vector by reshaping the harmonic force
-            % matrix fh in a way that it becomes a column vector with
-            % sysDOF elements
-            self.fSys = reshape(self.fh.',1,[]).';
-
-        end
-
-        % CALCULATE INNER FORCES AT NODES
-        %
-        % Inputs:
-        %   p_u  - nodal displacements
-        %   p_om - excitation force frequency
-        function fi_nodes = calcInnerF(self, p_u, p_om)
-
-            % number of elements connected to each node
-            nElNode = sum(self.nAdj~=0,2);
-
-            % calculate maximum number of individual elements connected
-            % to one node
-            nElMax = max(nElNode);
-
-            % allocate fi as zero-vector with sysDOF number of rows and
-            % nElMax number of columns
-            fi = zeros(self.sysDOF(),nElMax);
-
-            % allocate fi_nodes (nodal inner forces vector with
-            % recovered forces by averaging) with sysDOF number of rows
-            % and one column
-            fi_nodes = zeros(self.sysDOF(),1);
-
-            % column counter
-            fi_col = ones(self.N,1);
-
-            % run through all beam elements
-            for el = self.elements'
-
-                % element node indices
-                nIdx = el{1};
-
-                % get x- and z-coordinates of both element nodes using
-                % the index vector
-                xz12 = self.nodes(nIdx,:);
-
-                % resulting vector between both nodes
-                dxz12 = xz12(2,:) - xz12(1,:);
-
-                % calculate element length and angle
-                le    = norm(dxz12);
-                alpha = -atan2(dxz12(2), dxz12(1));
-
-                % calculate DOF index vector for node assignment of the
-                % inner forces
-                %
-                % first: multiply the element node index vector by NDOF
-                %        and substract (NDOF-1) to get the index vector
-                %        in terms of global DOF indices
-                g_idx_dof = self.NDOF*nIdx'-(self.NDOF-1);
-                
-                % second: expand the node DOF index column vector
-                %         p_idx_dof to get a matrix with NDOF columns
-                %         and two (number of element nodes) rows
-                m_idx_dof = repmat(g_idx_dof, 1, self.NDOF);
-
-                % third: expand the local DOF index vector IDOF_VEC-1 in
-                %        the same way and sum up both matrices
-                m_idx_dof = m_idx_dof + repmat(self.IDOF_VEC-1, 2, 1);
-
-                % fourth: the final dof index vector is generated by
-                %         concatenating all of the matrix' columns
-                idx_dof = m_idx_dof(:);
-                
-                % calculate nodal inner forces
-                fi_calc = beam_iForces( p_u(idx_dof), le, ...
-                                        alpha, el{2} );
-
-                % for each node, append the calculated forces to the
-                % inner force vector
-                for n = [1:2]
-
-                    rows = idx_dof(n:2:end);
-                    col  = fi_col(nIdx(n));
-
-                    fi(rows,col) = fi_calc(n:2:end);
-
-                    % increment inner force vector column counter
-                    fi_col(nIdx(n)) = col+1;
-
-                end
-
-            end
-
-            % perform stress recovery for each node
-            % TODO: check error (this is simple averaging!)
-            % see VAZ Jr. et.al. 2009
-            for n = [1:self.N]
-                
-                % indices
-                idx = n*self.NDOF+[1 2 3]-self.NDOF;
-
-                fi_nodes(idx) = mean(fi(idx,1:nElNode(n)),2);
-
-            end
+            s.nodes.setForce( p_i_node, p_f.' );
 
         end
 

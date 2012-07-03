@@ -113,9 +113,7 @@ classdef c_prj_dframe < handle
 %    study_EIBolt    - parameter study of bolt bending rigidity
 %
 %    getIndices      - return node indices of specific nodes
-%    extractNodes    - extract specific node variable data from the
-%                      discretized system
-%    vectIndices     - return data vector indices for specified nodes
+%    nIdxD           - get node index of the discretized system
 %
 %    txtOut          - text output
 %
@@ -125,7 +123,7 @@ classdef c_prj_dframe < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-06 16:02 CEST
-% Last Modified : 2012-06-14 13:29 CEST
+% Last Modified : 2012-07-03 14:08 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -176,7 +174,7 @@ classdef c_prj_dframe < handle
         % force amplitudes [ Fx ; Fz ; My ]
         D_F = [ 0 ; 100.0 ; 0 ];
         % force node index
-        D_FNODES = [ 2 ];
+        D_FNODES = 2;
 
         % boundary conditions
         % clamped (fixed) nodes
@@ -187,7 +185,7 @@ classdef c_prj_dframe < handle
         D_BC_INFINIT = 'firstAndLast';
 
         % probe node indices (after double-frame structure)
-        D_PROBES = 6;
+        D_PROBES = 7;
 
         % default configuration options
         % bash mode
@@ -369,8 +367,11 @@ classdef c_prj_dframe < handle
             xn6 = xn5;
             zn6 = zn3;
 
-            xn7 = xn6 + s.lInf;
+            xn7 = xn6 + 0.5*s.lInf;
             zn7 = zn6;
+
+            xn8 = xn7 + 0.5*s.lInf;
+            zn8 = zn7;
 
             % nodes coordinate vector
             s.nodes = [ xn1 zn1 ;
@@ -379,7 +380,8 @@ classdef c_prj_dframe < handle
                         xn4 zn4 ;
                         xn5 zn5 ;
                         xn6 zn6 ;
-                        xn7 zn7 ];
+                        xn7 zn7 ;
+                        xn8 zn8 ];
 
         end
 
@@ -392,7 +394,8 @@ classdef c_prj_dframe < handle
                         3 4 s.rhoAFrame s.EAFrame s.EIFrame s.nFrame ;
                         4 5 s.rhoABolt  s.EABolt  s.EIBolt  s.nBolt  ;
                         5 6 s.rhoAFrame s.EAFrame s.EIFrame s.nFrame ;
-                        6 7 s.rhoASkin  s.EASkin  s.EISkin  s.nSkin ];
+                        6 7 s.rhoASkin  s.EASkin  s.EISkin  s.nSkin  ;
+                        7 8 s.rhoASkin  s.EASkin  s.EISkin  s.nSkin ];
 
         end
 
@@ -405,7 +408,7 @@ classdef c_prj_dframe < handle
 
             % initialize simply supported boundaries
             idx = s.getIndices(s.bc_spprted);
-            s.frame.nodeBC_jointed(idx);
+            s.frame.nodeBC_spprted(idx);
 
             % initialize infinite element boundaries
             idx = s.getIndices(s.bc_infinit);
@@ -427,18 +430,19 @@ classdef c_prj_dframe < handle
             % get complex displacement amplitudes from harmonic analysis
             u = s.fem.harmonicAnalysis(s.omega);
 
-            % get complex internal force amplitudes
-            f = s.fem.calcInnerF(u, s.omega);
+            % get element indices of beams attached to the probe node
+            el = nonzeros(s.fem.el_beams.adj(s.nIdxD(s.probes)));
 
-            % extract the values from the probe-nodes
-            u_p = s.extractNodes(u, s.probes);
-            f_p = s.extractNodes(f, s.probes);
+            % calc vibrational power of the probe-node neighbor elements
+            P_p = s.fem.el_beams.power(el, u, s.omega);
 
-            % extract the node displacement at the force node 
-            u_f = s.extractNodes(u, s.fNodes);
+            % average power
+            P_p = mean(P_p);
 
-            % calculate powers at probe and force nodes
-            P_p = sum(real(0.5*f_p.*conj(1i*s.omega*u_p)));
+            % extract the node displacement amplitude at the force node
+            u_f = u(:,s.nIdxD(s.fNodes));
+
+            % calculate power at force node
             P_f = sum(real(0.5*s.f.*conj(1i*s.omega*u_f)));
 
             % tl equals 10*log10(transmitted power through
@@ -771,11 +775,11 @@ classdef c_prj_dframe < handle
         %
         function idx = getIndices(s, p_nodeSpec)
 
-            if isstr(p_nodeSpec)
+            if ischar(p_nodeSpec)
 
                 switch p_nodeSpec
                     case 'all'
-                        idx = [1:size(s.nodes,1)];
+                        idx = 1:size(s.nodes,1);
                     case 'none'
                         idx = [ ];
                     case 'firstAndLast'
@@ -792,43 +796,17 @@ classdef c_prj_dframe < handle
 
         end
 
-        % EXTRACT SPECIFIC NODE VARIABLE DATA FROM THE DISCRETIZED SYSTEM
+        % GET NODE INDEX OF THE DISCRETIZED SYSTEM
         %
         % Inputs:
-        %   p_v     - column vector with the variable data for each node
-        %             of the discretized system
-        %             (may be a multiple of the system node count, e.g.
-        %             to extract nodal displacements or nod coordinates)
-        %   p_nodes - row vector with the GLOBAL node indices which the
-        %             data is extracted from
-        function v = extractNodes(s, p_v, p_nodes)
+        %   p_n - node indices
+        function idx = nIdxD( s, p_n )
 
-            p_nodes = s.getIndices(p_nodes);
+            n = s.getIndices(p_n);
 
-            % number of values per node
-            nV = numel(p_v)/s.fem.N;
-
-            % nodes indices of the discretized system for the main
-            % system nodes (which are used in this class)
-            nIdx = s.frame.frame_nodes_idx;
-
-            % return the node values in matrix form (rows -> nodes;
-            % columns -> data values)
-            v = p_v(s.vectIndices(nIdx(p_nodes), nV));
+            idx = s.frame.frame_nodes_idx(n);
 
         end
-
-        % RETURN DATA VECTOR INDICES FOR SPECIFIED NODES
-        %
-        % Inputs:
-        %   p_nIdx - node indices
-        %   p_nV   - number of data values per node
-        function idx = vectIndices(s, p_nIdx, p_nV)
-
-            idx = p_nV*p_nIdx*ones(1,p_nV)-p_nV+1+ ...
-                  ones(numel(p_nIdx),1)*[0:p_nV-1];
-
-        end 
 
         % TEXT OUTPUT
         %
