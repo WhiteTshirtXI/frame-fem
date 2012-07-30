@@ -50,7 +50,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-30 13:57 CEST
+% Last Modified : 2012-07-30 16:41 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -224,10 +224,10 @@ classdef c_sys_fem < handle
             % assemble system matrices
             [MSys,KSys] = s.el_beams.mSys();
 
-            % calculate eigenvaues and eigenvectors
+            % calculate eigenvaues and eigenvectors close to zero
             [s.eigVec(idx,:),s.eigVal] = eigs(  KSys(idx,idx), ...
                                                      -MSys(idx,idx), ...
-                                                      p_n, 'sm');
+                                                      p_n, 1e-5);
 
         end
 
