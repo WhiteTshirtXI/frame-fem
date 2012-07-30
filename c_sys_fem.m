@@ -49,7 +49,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-03 14:11 CEST
+% Last Modified : 2012-07-30 13:17 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -255,6 +255,13 @@ classdef c_sys_fem < handle
         function f = eigF(s, p_n)
 
             f = s.eigOmega(p_n)./(2*pi);
+
+        end
+
+        % MAXIMUM NUMBER OF EIGENMODES
+        function nMax = maxModes( s )
+
+            nMax = numel(s.nodes.idxFreeDOFs());
 
         end
 
