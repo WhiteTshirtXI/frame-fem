@@ -49,7 +49,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-30 13:17 CEST
+% Last Modified : 2012-07-30 13:50 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -241,8 +241,11 @@ classdef c_sys_fem < handle
             % calculate eigenvectors and eigenfrequencies
             s.eigCalc(p_n);
             
-            % return vector of angular eigenfrequencies
-            omega = imag(sqrt(diag(s.eigVal)));
+            % return vector of angular eigenfrequencies and re-organize
+            % eigenvalue and eigenvector matrices
+            [omega,idx] = sort(imag(sqrt(diag(s.eigVal))));
+            s.eigVal = s.eigVal(idx,idx);
+            s.eigVec = s.eigVec(:,idx);
 
         end
 
