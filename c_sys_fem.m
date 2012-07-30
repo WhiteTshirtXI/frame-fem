@@ -36,6 +36,7 @@ classdef c_sys_fem < handle
 %    eigCalc         - calculate eigenvalues and eigenvectors
 %    eigOmega        - calculate angular eigenfrequencies
 %    eigF            - calculate eigenfrequencies
+%    maxModes        - maximum number of eigenmodes
 %
 %    addNodeBC       - add nodal boundary condition
 %    addNodeBC_inf   - add nodal boundary condition for infinite
@@ -49,7 +50,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-30 13:50 CEST
+% Last Modified : 2012-07-30 13:57 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
