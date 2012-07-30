@@ -36,6 +36,7 @@ classdef c_sys_fem < handle
 %    eigCalc         - calculate eigenvalues and eigenvectors
 %    eigOmega        - calculate angular eigenfrequencies
 %    eigF            - calculate eigenfrequencies
+%    maxModes        - maximum number of eigenmodes
 %
 %    addNodeBC       - add nodal boundary condition
 %    addNodeBC_inf   - add nodal boundary condition for infinite
@@ -49,7 +50,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-03 14:11 CEST
+% Last Modified : 2012-07-30 13:57 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -241,8 +242,11 @@ classdef c_sys_fem < handle
             % calculate eigenvectors and eigenfrequencies
             s.eigCalc(p_n);
             
-            % return vector of angular eigenfrequencies
-            omega = imag(sqrt(diag(s.eigVal)));
+            % return vector of angular eigenfrequencies and re-organize
+            % eigenvalue and eigenvector matrices
+            [omega,idx] = sort(imag(sqrt(diag(s.eigVal))));
+            s.eigVal = s.eigVal(idx,idx);
+            s.eigVec = s.eigVec(:,idx);
 
         end
 
@@ -255,6 +259,13 @@ classdef c_sys_fem < handle
         function f = eigF(s, p_n)
 
             f = s.eigOmega(p_n)./(2*pi);
+
+        end
+
+        % MAXIMUM NUMBER OF EIGENMODES
+        function nMax = maxModes( s )
+
+            nMax = numel(s.nodes.idxFreeDOFs());
 
         end
 
