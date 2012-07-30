@@ -58,7 +58,7 @@ classdef c_vv_beam_nModes < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-07-03 15:00 CEST
-% Last Modified : 2012-07-25 10:15 CEST
+% Last Modified : 2012-07-30 16:40 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -169,11 +169,12 @@ classdef c_vv_beam_nModes < handle
                 s.initFEA();
 
                 % if neccessary, correct maximum node number
-                nMax = min(nMax, numel(s.fem.nodes.idxFreeDOFs));
+                nMax = min(nMax, s.fem.maxModes());
 
                 % calculate eigenfrequencies of discretized system and
                 % compute difference to analytical solution
-                d(1:nMax,r) = sort(s.fem.eigF(nMax))./f(1:nMax)-1;
+                d(1:nMax,r) = max(s.fem.eigF(nMax),eps)./ ...
+                              max(f(1:nMax),eps)-1;
 
             end
 
