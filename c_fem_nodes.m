@@ -43,7 +43,7 @@ classdef c_fem_nodes < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-21 12:24 CEST
-% Last Modified : 2012-07-03 14:03 CEST
+% Last Modified : 2012-07-30 13:55 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -143,8 +143,12 @@ classdef c_fem_nodes < handle
         % RETURN NODE XZ-COORDINATE VECTORS
         %
         % Inputs:
-        %   p_i - node index or index vector
+        %   p_i - node index or index vector (OPTIONAL)
         function xz = xz( s, p_i )
+
+            if nargin < 2
+                p_i = 1:s.iln;
+            end
 
             xz = [ s.x(p_i) ; s.z(p_i) ].';
 
