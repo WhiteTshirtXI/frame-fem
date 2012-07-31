@@ -50,7 +50,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-30 17:11 CEST
+% Last Modified : 2012-07-31 09:40 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -204,11 +204,17 @@ classdef c_sys_fem < handle
         %   p_n - number of eigenmodes to be returned.
         %         OPTIONAL: if non-existent, all eigenmodes will be
         %         returned
-        function s = eigCalc(s, p_n)
+        %   p_s - eigenvalue shift
+        %         OPTIONAL: if non-existent, shift is set to zero
+        function s = eigCalc(s, p_n, p_s)
             
             % check if the parameter p_n has been specified
             if ~exist('p_n','var')
                 p_n = s.sysDOF()-1;
+            end
+            % check if the parameter p_s has been specified
+            if ~exist('p_s','var')
+                p_s = 0;
             end
                 
             % get index vector of free (non-fixed) nodes
@@ -224,10 +230,11 @@ classdef c_sys_fem < handle
             % assemble system matrices
             [MSys,KSys] = s.el_beams.mSys();
 
-            % calculate eigenvaues and eigenvectors close to zero
+            % calculate eigenvalues and eigenvectors corresponding to
+            % the lowest eigenfrequencies
             [s.eigVec(idx,:),s.eigVal] = eigs(  KSys(idx,idx), ...
                                                      -MSys(idx,idx), ...
-                                                      p_n, 1);
+                                                      p_n, p_s);
 
         end
 
@@ -237,10 +244,21 @@ classdef c_sys_fem < handle
         %   p_n - number of eigenmodes to be returned.
         %         OPTIONAL: if non-existent, all eigenmodes will be
         %         returned
-        function omega = eigOmega(s, p_n)
+        %   p_s - eigenvalue shift
+        %         OPTIONAL: if non-existent, shift is set to zero
+        function omega = eigOmega(s, p_n, p_s)
+            
+            % check if the parameter p_n has been specified
+            if ~exist('p_n','var')
+                p_n = s.sysDOF()-1;
+            end
+            % check if the parameter p_s has been specified
+            if ~exist('p_s','var')
+                p_s = 0;
+            end
 
             % calculate eigenvectors and eigenfrequencies
-            s.eigCalc(p_n);
+            s.eigCalc(p_n, p_s);
             
             % return vector of angular eigenfrequencies and re-organize
             % eigenvalue and eigenvector matrices
@@ -256,9 +274,20 @@ classdef c_sys_fem < handle
         %   p_n - number of eigenmodes to be returned.
         %         OPTIONAL: if non-existent, all eigenmodes will be
         %         returned
-        function f = eigF(s, p_n)
+        %   p_s - eigenvalue shift
+        %         OPTIONAL: if non-existent, shift is set to zero
+        function f = eigF(s, p_n, p_s)
+            
+            % check if the parameter p_n has been specified
+            if ~exist('p_n','var')
+                p_n = s.sysDOF()-1;
+            end
+            % check if the parameter p_s has been specified
+            if ~exist('p_s','var')
+                p_s = 0;
+            end
 
-            f = s.eigOmega(p_n)./(2*pi);
+            f = s.eigOmega(p_n, p_s)./(2*pi);
 
         end
 
