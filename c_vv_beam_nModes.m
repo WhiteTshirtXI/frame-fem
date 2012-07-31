@@ -58,7 +58,7 @@ classdef c_vv_beam_nModes < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-07-03 15:00 CEST
-% Last Modified : 2012-07-30 16:40 CEST
+% Last Modified : 2012-07-31 10:03 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -173,8 +173,8 @@ classdef c_vv_beam_nModes < handle
 
                 % calculate eigenfrequencies of discretized system and
                 % compute difference to analytical solution
-                d(1:nMax,r) = max(s.fem.eigF(nMax),eps)./ ...
-                              max(f(1:nMax),eps)-1;
+                d(1:nMax,r) = max(abs(s.fem.eigF(nMax,-1)),1e-2)./ ...
+                              max(f(1:nMax),1e-2)-1;
 
             end
 
@@ -243,7 +243,7 @@ classdef c_vv_beam_nModes < handle
             % check if the standard deviation in the results exceeds a
             % specific tolerance
             dev = max(max(std(d,0,3)));
-            devTol = sqrt(eps);
+            devTol = 1e-6;
 
             if dev > devTol
 
