@@ -31,6 +31,7 @@ classdef c_fem_nodes < handle
 %    n           - return number of nodes
 %
 %    fixNode     - fix nodal dof(s)
+%    freeDOFs    - return free dofs mask vector 
 %    idxFreeDOFs - return index vector of free dofs
 %    setSource   - set nodal source(s)
 %
@@ -46,7 +47,7 @@ classdef c_fem_nodes < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-21 12:24 CEST
-% Last Modified : 2012-08-10 09:36 CEST
+% Last Modified : 2012-08-10 11:24 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -185,6 +186,14 @@ classdef c_fem_nodes < handle
 
         end
 
+        % RETURN FREE DOFS MASK VECTOR
+        function idx = freeDOFs( s )
+
+            % all node DOFs index vector
+            idx = ~s.bc(:);
+
+        end
+
         % RETURN INDEX VECTOR OF FREE DOFS
         function idx = idxFreeDOFs( s )
 
@@ -192,7 +201,7 @@ classdef c_fem_nodes < handle
             idx = (1:s.NDOF*s.n).';
 
             % use bc vector as mask for the index-vector
-            idx = idx(~s.bc);
+            idx = idx(s.freeDOFs());
 
         end
 
