@@ -2,7 +2,7 @@ classdef c_fem_nodes < handle
 %C_FEM_NODES - Class containing node informations of the FEM system
 % This class contains properties and functions for the handling of the
 % FEM system nodes. Nodes can be added, defined, deleted and boundary
-% conditions, nodal forces etc. can be applied.
+% conditions, nodal sources etc. can be applied.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % c_fem_nodes.m
@@ -10,13 +10,16 @@ classdef c_fem_nodes < handle
 %
 % Class definition
 %
+% Constant properties :
+%    NDOF - number of DOFs per node
+%
 % Properties :
 %    x   - row vector of node x-coordinates
 %    z   - row vector of node z-coordinates
 %
 %    bc  - row vector of nodal boundary conditions (fixed degrees of
 %          freedom)
-%    f   - row vector of nodal forces
+%    s   - row vector of nodal sources (forces, charge)
 %
 %    iln - last added node index
 %
@@ -29,7 +32,7 @@ classdef c_fem_nodes < handle
 %
 %    fixNode     - fix nodal dof(s)
 %    idxFreeDOFs - return index vector of free dofs
-%    setForce    - set nodal force(s)
+%    setSource   - set nodal source(s)
 %
 %    distAl      - return distance and angle between two nodes
 %
@@ -43,9 +46,18 @@ classdef c_fem_nodes < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-21 12:24 CEST
-% Last Modified : 2012-07-30 13:55 CEST
+% Last Modified : 2012-08-10 09:36 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % CONSTANT PROPERTIES %
+    properties (Constant)
+
+        % number of DOFs per node
+        NDOF = 4;
+
+    end
+
 
     % PRIVATE PROPERTIES %
     properties (SetAccess = private)
@@ -61,8 +73,9 @@ classdef c_fem_nodes < handle
         % 0 -> DOF is free
         bc;
 
-        % row vector of nodal forces (x- and z-direction) and moments
-        f;
+        % row vector of nodal sources (forces, moments, electric
+        % potential)
+        s;
 
         % last added node index
         iln;
@@ -82,11 +95,11 @@ classdef c_fem_nodes < handle
             s.x = sparse( 1, p_n );
             s.z = sparse( 1, p_n );
 
-            % initialize boundary conditions and nodal forces as zero
+            % initialize boundary conditions and nodal sources as zero
             % matrices (each row corresponds to a node, each column
             % corresponds to a nodal degree of freedom)
-            s.bc = sparse( 3, p_n );
-            s.f  = sparse( 3, p_n );
+            s.bc = sparse( s.NDOF, p_n );
+            s.s  = sparse( s.NDOF, p_n );
 
             % last node index = 0
             s.iln = 0;
@@ -176,21 +189,21 @@ classdef c_fem_nodes < handle
         function idx = idxFreeDOFs( s )
 
             % all node DOFs index vector
-            idx = (1:3*s.n).';
+            idx = (1:s.NDOF*s.n).';
 
             % use bc vector as mask for the index-vector
             idx = idx(~s.bc);
 
         end
 
-        % SET NODAL FORCE(S)
+        % SET NODAL SOURCE(S)
         %
         % Inputs:
         %  p_i - node index or index vector
-        %  p_f - force vector or force matrix (for multiple nodes)
-        function s = setForce( s, p_i, p_f )
+        %  p_s - source vector or source matrix (for multiple nodes)
+        function s = setSource( s, p_i, p_s )
 
-            s.f(:,p_i) = p_f;
+            s.s(:,p_i) = p_s;
 
         end
 
@@ -222,8 +235,7 @@ classdef c_fem_nodes < handle
         %   p_i - node index or index vector
         function idx = sysIdx( p_i )
 
-            % number of nodal degrees of freedom
-            NDOF = 3;
+            NDOF = s.NDOF;
             
             % first: multiply the element node index vector by NDOF and
             %        substract (NDOF-1) to get the index vector in terms

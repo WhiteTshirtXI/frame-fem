@@ -28,7 +28,7 @@ classdef c_frame_def < handle
 %    frame_nodes_bc  - frame nodal boundary conditions array
 %    frame_inf_bc    - frame nodal boundary conditions array for
 %                      infinite elements
-%    frame_fh        - nodal harmonic force amplitudes vector
+%    frame_sh        - nodal harmonic source amplitudes vector
 %
 % Methods :
 %    c_frame_def       - constructor
@@ -43,6 +43,7 @@ classdef c_frame_def < handle
 %    nodeBC_infinite   - apply infinite element boundary condition to
 %                        frame nodes (WANG & LAI 1999)
 %
+%    addHarmonicSource - add harmonic source to nodes
 %    addHarmonicForce  - add harmonic force to nodes
 %    addHarmonicForceX - add harmonic force in x-direction to nodes
 %    addHarmonicForceZ - add harmonic force in z-direction to nodes
@@ -53,7 +54,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-07-03 10:24 CEST
+% Last Modified : 2012-08-09 15:20 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -85,9 +86,9 @@ classdef c_frame_def < handle
         % nodal DOF (if not zero)
         frame_inf_bc;
 
-        % nodal harmonic force amplitudes vector
-        % ([fx1 fz1 mxz1; fx2 fz2 mxz2; ...])
-        frame_fh;
+        % nodal harmonic source amplitudes vector
+        % ([fx1 fz1 mxz1 sigma1; fx2 fz2 mxz2 sigma2; ...])
+        frame_sh;
 
     end
 
@@ -106,11 +107,11 @@ classdef c_frame_def < handle
             s.frame_nodes_idx = zeros(size(s.frame_nodes,1),1);
 
             % initialize boundary conditions vectors as empty
-            s.frame_nodes_bc = zeros(size(p_nodes,1),3);
-            s.frame_inf_bc = zeros(size(p_nodes,1),6);
+            s.frame_nodes_bc = zeros(size(p_nodes,1),4);
+            s.frame_inf_bc = zeros(size(p_nodes,1),8);
 
-            % initialize nodal forces and moments as empty
-            s.frame_fh = zeros(size(p_nodes,1),3);
+            % initialize nodal sources as empty
+            s.frame_sh = zeros(size(p_nodes,1),4);
 
         end
 
@@ -214,8 +215,8 @@ classdef c_frame_def < handle
             sys_fem.addNodeBC_inf(s.frame_nodes_idx, ...
                                   s.frame_inf_bc);
 
-            % add harmonic force amplitudes to system
-            sys_fem.addNodeForces(s.frame_nodes_idx, s.frame_fh);
+            % add harmonic source amplitudes to system
+            sys_fem.addNodeSources(s.frame_nodes_idx, s.frame_sh);
 
         end
 
@@ -226,7 +227,7 @@ classdef c_frame_def < handle
         function s = nodeBC_clamped( s, p_nodes )
 
             for node = p_nodes
-                s.frame_nodes_bc(node,:) = [1 1 1];
+                s.frame_nodes_bc(node,:) = [1 1 1 0];
             end
 
         end
@@ -239,7 +240,7 @@ classdef c_frame_def < handle
         function s = nodeBC_spprted( s, p_nodes )
 
             for node = p_nodes
-                s.frame_nodes_bc(node,:) = [1 1 0];
+                s.frame_nodes_bc(node,:) = [1 1 0 0];
             end
 
         end
@@ -254,7 +255,7 @@ classdef c_frame_def < handle
         function s = nodeBC_infinite( s, p_nodes, p_omega )
             
             % clear boundary condition vector
-            s.frame_inf_bc = zeros(size(s.frame_nodes,1),6);
+            s.frame_inf_bc = zeros(size(s.frame_nodes,1),8);
 
             for node = p_nodes
 
@@ -287,8 +288,23 @@ classdef c_frame_def < handle
                 bcDB = bcKB/p_omega;
 
                 % add to boundary condition vector
-                s.frame_inf_bc(node,:) = [ bcKL bcDL bcKB bcDB 0 0 ];
+                s.frame_inf_bc(node,:) = [ bcKL bcDL bcKB bcDB 0 0 0 0];
 
+            end
+
+        end
+
+        % ADD HARMONIC SOURCE TO NODES
+        %
+        % Inputs:
+        %   p_nodes  - node indices of the nodes where an external
+        %              harmonic force is applied
+        %   p_S      - source amplitudes magnitude,
+        %              [ Fx ; Fz ; My ; sigma ]
+        function s = addHarmonicSource( s, p_nodes, p_S )
+
+            for node = p_nodes
+                s.frame_sh(node,:) = p_S.';
             end
 
         end
@@ -301,9 +317,7 @@ classdef c_frame_def < handle
         %   p_F      - force amplitudes magnitude, [ Fx ; Fz ; My ]
         function s = addHarmonicForce( s, p_nodes, p_F )
 
-            for node = p_nodes
-                s.frame_fh(node,:) = p_F.';
-            end
+            s.addHarmonicSource(p_nodes, [p_F ; 0]);
 
         end
 

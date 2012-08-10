@@ -2,7 +2,8 @@ classdef c_fem_el_beams < handle
 %C_FEM_EL_BEAMS - Class containing beam elements of the fem system
 % This class contains properties and functions for the handling of the
 % FEM system beam-elments. The beam elements are shear-stiff and carry
-% normal, transverse and bending moment loads.
+% normal, transverse and bending moment loads and may have piezoelectric
+% properties in the direction of the beam axis.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % c_fem_el_beams.m
@@ -19,30 +20,36 @@ classdef c_fem_el_beams < handle
 %    rhoA - vector of element mass loading
 %    EA   - vector of element axial stiffnesses
 %    EI   - vector of element bending stiffnesses
+%    dp   - vector of element piezo-electric couling constants
+%    epsA - vector of element area-permittivity constants
 %
 %    ile  - last added element index
 %
 % Methods :
-%    c_fem_el_beams - constructor
+%    c_fem_el_beams    - constructor
 %
-%    addBeam        - add beam(s)
-%    addBeamConst   - add beams with constant properties between nodes
+%    addBeamPiezo      - add beam(s)
+%    addBeamPiezoConst - add beam(s) with constant properties between
+%                        nodes
+%    addBeam           - add beam(s) w/o piezoelectric coupling
+%    addBeamConst      - add beams with constant properties between
+%                        nodes w/o piezoelectric coupling
 %
 %
-%    mEl            - return element mass matrix
-%    kEl            - return element stiffness matrix
-%    cdEl           - return element displacement matrix for beam
-%                     element centroid displacements
-%    sdEl           - return element stress-diplacement matrix for beam
-%                     element centroid stresses
-%    mSys           - return system matrices
+%    mEl               - return element mass matrix
+%    kEl               - return element stiffness matrix
+%    cdEl              - return element displacement matrix for beam
+%                        element centroid displacements
+%    sdEl              - return element stress-diplacement matrix for
+%                        beam element centroid stresses
+%    mSys              - return system matrices
 %
-%    elCtrDisp      - return element centroid displacements
-%    elCtrStress    - recover element centroid stresses
-%    power          - calculate vibrational power in elements
+%    elCtrDisp         - return element centroid displacements
+%    elCtrStress       - recover element centroid stresses
+%    power             - calculate vibrational power in elements
 %
-%    adj            - return adjacency matrix of inter-connected nodes
-%    maxIdx         - return highest node index
+%    adj               - return adjacency matrix of inter-connected nodes
+%    maxIdx            - return highest node index
 %
 %
 % Static Methods :
@@ -58,7 +65,7 @@ classdef c_fem_el_beams < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-22 13:10 CEST
-% Last Modified : 2012-07-03 14:01 CEST
+% Last Modified : 2012-08-10 10:05 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -80,6 +87,10 @@ classdef c_fem_el_beams < handle
         EA;
         % vector of element bending stiffnesses
         EI;
+        % vector of element piezo-electric coupling constants
+        dp;
+        % vector of element area-permittivity constants
+        epsA;
 
         % last added element index
         ile;
@@ -99,6 +110,8 @@ classdef c_fem_el_beams < handle
             s.rhoA = sparse(p_nElBeams, 1);
             s.EA = sparse(p_nElBeams, 1);
             s.EI = sparse(p_nElBeams, 1);
+            s.dp = sparse(p_nElBeams, 1);
+            s.epsA = sparse(p_nElBeams, 1);
 
             % last added element index = 0
             s.ile = 0;
@@ -115,8 +128,10 @@ classdef c_fem_el_beams < handle
         %   p_rhoA - mass loading
         %   p_EA   - axial stiffness
         %   p_EI   - bending stiffness
-        function s = addBeam( s, p_n1, p_n2, p_l, p_a, p_rhoA, p_EA, ...
-                                                                 p_EI )
+        %   p_dp   - piezoelectric coupling factor
+        %   p_epsA - area-permittivity constant
+        function s = addBeamPiezo( s, p_n1, p_n2, p_l, p_a, p_rhoA,  ...
+                                              p_EA, p_EI, p_dp, p_epsA )
 
             % number of new elements
             nNew = numel(p_n1);
@@ -132,6 +147,8 @@ classdef c_fem_el_beams < handle
             s.rhoA(eli) = p_rhoA(:);
             s.EA(eli) = p_EA(:);
             s.EI(eli) = p_EI(:);
+            s.dp(eli) = p_dp(:);
+            s.epsA(eli) = p_epsA(:);
             
             % update index of last added element
             s.ile = s.ile+nNew;
@@ -147,20 +164,65 @@ classdef c_fem_el_beams < handle
         %   p_rhoA - mass loading (scalar)
         %   p_EA   - axial stiffness (scalar)
         %   p_EI   - bending stiffness (scalar)
-        function s = addBeamConst( s, p_n, p_l, p_a, p_rhoA, p_EA,   ...
-                                                                  p_EI )
+        %   p_dp   - piezoelectric coupling factor (scalar)
+        %   p_epsA - area-permittivity constant (scalar)
+        function s = addBeamPiezoConst( s, p_n, p_l, p_a, p_rhoA,    ...
+                                              p_EA, p_EI, p_dp, p_epsA )
 
             % one-vector for the constant properites
             one = ones(1,numel(p_n)-1);
 
             % add elements using artificial properties vectors
-            s.addBeam(p_n(1:end-1), ...     % first node index vector
-                      p_n(2:end),   ...     % second node index vector
-                      one*p_l,      ...
-                      one*p_a,      ...
-                      one*p_rhoA,   ...
-                      one*p_EA,     ...
-                      one*p_EI);
+            s.addBeamPiezo(p_n(1:end-1), ... % first node index vector
+                           p_n(2:end),   ... % second node index vector
+                           one*p_l,      ...
+                           one*p_a,      ...
+                           one*p_rhoA,   ...
+                           one*p_EA,     ...
+                           one*p_EI,     ...
+                           one*p_dp,     ...
+                           one*p_epsA);
+
+        end
+
+
+        % ADD BEAM(S) W/O PIEZOELECTRIC COUPLING
+        %
+        % Inputs:
+        %   p_n1   - first node index
+        %   p_n2   - second node index
+        %   p_l    - element length
+        %   p_a    - element orientation angle 
+        %   p_rhoA - mass loading
+        %   p_EA   - axial stiffness
+        %   p_EI   - bending stiffness
+        function s = addBeam( s, p_n1, p_n2, p_l, p_a, p_rhoA, p_EA, ...
+                                                                 p_EI )
+
+            % zero-vector for non-effective piezo-electric properites
+            zero = zeros(1,numel(p_n1));
+
+            % add elements with zero piezo-electric prpoerties
+            s.addBeamPiezo( p_n1, p_n2, p_l, p_a, p_rhoA, p_EA,     ...
+                                                    p_EI, zero, zero );
+
+        end
+
+        % ADD BEAMS WITH CONSTANT PROPERTIES BETWEEN NODES W/O
+        % PIEZOELECTRIC COUPLING
+        %
+        % Inputs:
+        %   p_n    - node indices
+        %   p_l    - element length (scalar)
+        %   p_a    - element orientation angle (scalar)
+        %   p_rhoA - mass loading (scalar)
+        %   p_EA   - axial stiffness (scalar)
+        %   p_EI   - bending stiffness (scalar)
+        function s = addBeamConst( s, p_n, p_l, p_a, p_rhoA, p_EA,   ...
+                                                                  p_EI )
+
+            s.addBeamPiezoConst(p_n, p_l, p_a, p_rhoA, p_EA, p_EI,   ...
+                                                                  0, 0);
 
         end
 
@@ -170,16 +232,43 @@ classdef c_fem_el_beams < handle
         %   p_el - element index
         function m = mEl( s, p_el )
 
+            m = sparse(8,8);
+
             rhoA = s.rhoA(p_el);
             l = s.l(p_el);
             ll = l^2;
+            rhoAlr420 = rhoA*l/420;
 
-            m = (rhoA*l/420)*[ 140  70      0      0       0       0 ;
-                                70 140      0      0       0       0 ;
-                                 0   0    156     54   -22*l    13*l ;
-                                 0   0     54    156   -13*l    22*l ;
-                                 0   0  -22*l  -13*l    4*ll   -3*ll ;
-                                 0   0   13*l   22*l   -3*ll    4*ll ];
+            m(1,1) = rhoAlr420*140;
+            m(1,2) = rhoAlr420* 70;
+            
+            m(2,2) = rhoAlr420*140;
+
+            m(3,3) = rhoAlr420*156;
+            m(3,4) = rhoAlr420* 54;
+            m(3,5) = rhoAlr420*(-22*l);
+            m(3,6) = rhoAlr420*13*l;
+
+            m(4,4) = rhoAlr420*156;
+            m(4,5) = rhoAlr420*(-13*l);
+            m(4,6) = rhoAlr420*22*l;
+            
+            m(5,5) = rhoAlr420*4*ll;
+            m(5,6) = rhoAlr420*(-3*ll);
+
+            m(6,6) = rhoAlr420*4*ll;
+
+            % make matrix symmetric
+            m(2,1) = m(1,2);
+            
+            m(4,3) = m(3,4);
+            m(5,3) = m(3,5);
+            m(6,3) = m(3,6);
+
+            m(5,4) = m(4,5);
+            m(6,4) = m(4,6);
+
+            m(6,5) = m(5,6);
 
         end
 
@@ -189,18 +278,64 @@ classdef c_fem_el_beams < handle
         %   p_el - element index
         function k = kEl( s, p_el )
 
+            k = sparse(8,8);
+
             EA = s.EA(p_el);
             EI = s.EI(p_el);
             rl = 1/s.l(p_el);
+            EArl = EA*rl;
             EIrl = EI*rl;                     
             EIrll = EIrl*rl;
-                     
-            k = rl*[  EA -EA         0         0       0       0 ;
-                     -EA  EA         0         0       0       0 ;
-                       0   0  12*EIrll -12*EIrll -6*EIrl -6*EIrl ;
-                       0   0 -12*EIrll  12*EIrll  6*EIrl  6*EIrl ;
-                       0   0   -6*EIrl    6*EIrl    4*EI    2*EI ;
-                       0   0   -6*EIrl    6*EIrl    2*EI    4*EI ];
+            EIrlll = EIrll*rl;
+            EAdprl = EArl*s.dp(p_el);
+            epsArl = rl*s.epsA(p_el);
+
+            k(1,1) =  EArl;
+            k(1,2) = -EArl;
+            k(1,7) =  EAdprl;
+            k(1,8) = -EAdprl;
+
+            k(2,2) =  EArl;
+            k(2,7) = -EAdprl;
+            k(2,8) =  EAdprl;
+
+            k(3,3) =  12*EIrlll;
+            k(3,4) = -12*EIrlll;
+            k(3,5) = - 6*EIrll;
+            k(3,6) = - 6*EIrll;
+
+            k(4,4) = 12*EIrlll;
+            k(4,5) =  6*EIrll;
+            k(4,6) =  6*EIrll;
+            
+            k(5,5) = 4*EIrl;
+            k(5,6) = 2*EIrl;
+
+            k(6,6) = 4*EIrl;
+
+            k(7,7) = -epsArl;
+            k(7,8) =  epsArl;
+
+            k(8,8) = -epsArl;
+
+            % make matrix symmetric
+            k(2,1) = k(1,2);
+            k(7,1) = k(1,7);
+            k(8,1) = k(1,8);
+
+            k(7,2) = k(2,7);
+            k(8,2) = k(2,8);
+
+            k(4,3) = k(3,4);
+            k(5,3) = k(3,5);
+            k(6,3) = k(3,6);
+
+            k(5,4) = k(4,5);
+            k(6,4) = k(4,6);
+            
+            k(6,5) = k(5,6);
+
+            k(8,7) = k(7,8);
         
         end
 
@@ -214,9 +349,9 @@ classdef c_fem_el_beams < handle
             l = s.l(p_el);
             rl = 1/l;
                      
-            cdm = [ 4 4     0      0  0  0 ;
-                    0 0     4      4 -l  l ;
-                    0 0 12*rl -12*rl -2 -2 ] / 8;
+            cdm = [ 4 4     0      0  0  0 0 0 ;
+                    0 0     4      4 -l  l 0 0 ;
+                    0 0 12*rl -12*rl -2 -2 0 0 ] / 8;
         
         end
 
@@ -233,9 +368,10 @@ classdef c_fem_el_beams < handle
             EIrl = EI*rl;                     
             EIrll = EIrl*rl;
                      
-            sd = rl*[ -EA EA         0        0      0      0 ;
-                        0  0 -12*EIrll 12*EIrll 6*EIrl 6*EIrl ;
-                        0  0         0        0    -EI     EI ];
+            % TODO: check for piezo?
+            sd = rl*[ -EA EA         0        0      0      0 0 0 ;
+                        0  0 -12*EIrll 12*EIrll 6*EIrl 6*EIrl 0 0 ;
+                        0  0         0        0    -EI     EI 0 0 ];
         
         end
 
@@ -244,7 +380,7 @@ classdef c_fem_el_beams < handle
 
             % calculate maximum system matrix size using the highest
             % node index
-            maxIdx = s.maxIdx()*3;
+            maxIdx = s.maxIdx()*4;
 
             % pre-allocate result matrices
             M = sparse(maxIdx,maxIdx);
@@ -277,7 +413,7 @@ classdef c_fem_el_beams < handle
             uc = zeros(3,numel(p_e));
 
             % initialize local displacement vector
-            u = zeros(6,1);
+            u = zeros(8,1);
 
             % loop through element indices
             for el = 1:numel(p_e)
@@ -308,7 +444,7 @@ classdef c_fem_el_beams < handle
             sig = zeros(3,numel(p_e));
 
             % initialize local displacement vector
-            u = zeros(6,1);
+            u = zeros(8,1);
 
             % loop through element indices
             for el = 1:numel(p_e)
@@ -403,20 +539,24 @@ classdef c_fem_el_beams < handle
             ca = cos(p_a);
 
             % transformation matrix
-            Te = [ ca  0 -sa   0 0 0 ;
-                    0 ca   0 -sa 0 0 ;
-                   sa  0  ca   0 0 0 ;
-                    0 sa   0  ca 0 0 ;
-                    0  0   0   0 1 0 ;
-                    0  0   0   0 0 1 ];
+            Te = [ ca  0 -sa   0 0 0 0 0 ;
+                    0 ca   0 -sa 0 0 0 0 ;
+                   sa  0  ca   0 0 0 0 0 ;
+                    0 sa   0  ca 0 0 0 0 ;
+                    0  0   0   0 1 0 0 0 ;
+                    0  0   0   0 0 1 0 0 ;
+                    0  0   0   0 0 0 1 0 ;
+                    0  0   0   0 0 0 0 1 ];
 
             % transpose of transformation matrix
-            TeT = [  ca   0 sa  0 0 0 ;
-                      0  ca  0 sa 0 0 ;
-                    -sa   0 ca  0 0 0 ;
-                      0 -sa  0 ca 0 0 ;
-                      0   0  0  0 1 0 ;
-                      0   0  0  0 0 1 ];
+            TeT = [  ca   0 sa  0 0 0 0 0 ;
+                      0  ca  0 sa 0 0 0 0 ;
+                    -sa   0 ca  0 0 0 0 0 ;
+                      0 -sa  0 ca 0 0 0 0 ;
+                      0   0  0  0 1 0 0 0 ;
+                      0   0  0  0 0 1 0 0 ;
+                      0   0  0  0 0 0 1 0 ;
+                      0   0  0  0 0 0 0 1 ];
 
             % transform matrix
             M = TeT*p_M*Te;
@@ -434,12 +574,14 @@ classdef c_fem_el_beams < handle
             ca = cos(p_a);
 
             % transformation matrix
-            Te = [ ca  0 -sa   0 0 0 ;
-                    0 ca   0 -sa 0 0 ;
-                   sa  0  ca   0 0 0 ;
-                    0 sa   0  ca 0 0 ;
-                    0  0   0   0 1 0 ;
-                    0  0   0   0 0 1 ];
+            Te = [ ca  0 -sa   0 0 0 0 0 ;
+                    0 ca   0 -sa 0 0 0 0 ;
+                   sa  0  ca   0 0 0 0 0 ;
+                    0 sa   0  ca 0 0 0 0 ;
+                    0  0   0   0 1 0 0 0 ;
+                    0  0   0   0 0 1 0 0 ;
+                    0  0   0   0 0 0 1 0 ;
+                    0  0   0   0 0 0 0 1 ];
 
             % transpose of transformation matrix
             TeT = [  ca sa 0 ;
@@ -459,7 +601,9 @@ classdef c_fem_el_beams < handle
         function idx = sysIdx_el( p_i )
 
             % number of nodal degrees of freedom
-            NDOF = 3;
+            NDOF = 4;
+            % local dof index vector
+            ldiv = 0:(NDOF-1);
             
             % first: multiply the element node index vector by NDOF and
             %        substract (NDOF-1) to get the index vector in terms
@@ -472,7 +616,7 @@ classdef c_fem_el_beams < handle
 
             % third: expand the local DOF index vector [0;1;2] in the
             %        same way and sum up both matrices
-            idx = idx + repmat([0;1;2], 1, numel(p_i));
+            idx = idx + repmat(ldiv', 1, numel(p_i));
 
             % fourth: the final dof index vector is generated by
             %         concatenating all of the matrix' columns
