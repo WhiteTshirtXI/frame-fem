@@ -50,7 +50,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-08-10 09:46 CEST
+% Last Modified : 2012-08-10 11:17 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -173,8 +173,8 @@ classdef c_sys_fem < handle
         %   p_om - angular frequency of harmonic excitation forces
         function u = harmonicAnalysis(s, p_om)
 
-            % get index vector of free (non-fixed) nodes
-            idx = s.nodes.idxFreeDOFs();
+            % get mask vector of free (non-fixed) nodes
+            idx = s.nodes.freeDOFs();
 
             % pre-allocate displacement vector
             u = zeros(s.NDOF,s.nodes.iln);
@@ -222,11 +222,11 @@ classdef c_sys_fem < handle
                 p_s = 0;
             end
                 
-            % get index vector of free (non-fixed) nodes
-            idx = s.nodes.idxFreeDOFs();
+            % get mask vector of free (non-fixed) nodes
+            idx = s.nodes.freeDOFs();
 
             % number of free (non-fixed) DOFs
-            bcNFree = numel(idx);
+            bcNFree = nnz(idx);
 
             % initialize eigenvector and eigenvalue matrices as zero
             s.eigVec = zeros(bcNFree,p_n);
