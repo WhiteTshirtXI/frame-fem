@@ -1,10 +1,10 @@
 classdef c_frame_def < handle
 %C_FRAME_DEF - Class for the definition of a 2D frame-structure
 % This class is used to construct a twodimensional frame structure using
-% beam-truss-like elements. These "parent"-elements however are
-% subdivided into "child"-elements, which are used to construct a
-% network of nodes and finite elements in the process of fem
-% discretization.
+% beam-truss-like elements with (optional) piezoelectric properties.
+% These "parent"-elements however are subdivided into "child"-elements,
+% which are used to construct a network of nodes and finite elements in
+% the process of fem discretization.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % c_frame_def.m
@@ -18,6 +18,8 @@ classdef c_frame_def < handle
 %    IDXB_RHOA      - beam vector index of rho*A
 %    IDXB_EA        - beam vector index of E*A
 %    IDXB_EI        - beam vector index of E*I
+%    IDXB_DP        - beam vector index of dp-factor
+%    IDXB_EPSA      - beam vector index of eps*A
 %    IDXB_NELEMENTS - beam vector index of number of beam elements
 %
 %
@@ -33,7 +35,9 @@ classdef c_frame_def < handle
 % Methods :
 %    c_frame_def       - constructor
 %
-%    addBeam           - add beam(s) to the frame structure
+%    addBeamPiezo      - add beam(s) to the frame structure
+%    addBeam           - add beam(s) to the frame structure w/o
+%                        piezoelectric coupling
 %    discretize        - discretize the frame structure using fem and
 %                        return sys_fem-class
 %
@@ -54,7 +58,7 @@ classdef c_frame_def < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-25 11:05 CEST
-% Last Modified : 2012-08-09 15:20 CEST
+% Last Modified : 2012-08-10 12:13 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -67,12 +71,15 @@ classdef c_frame_def < handle
         IDXB_RHOA      = 3;
         IDXB_EA        = 4;
         IDXB_EI        = 5;
-        IDXB_NELEMENTS = 6;
+        IDXB_DP        = 6;
+        IDXB_EPSA      = 7;
+        IDXB_NELEMENTS = 8;
 
         % frame nodes array ([x1 z1; x2 z2; ...])
         frame_nodes;
 
-        % frame beams array ( [node1, node2, rhoA, EA, EI, nElements] )
+        % frame beams array ( [node1, node2, rhoA, EA, EI, dp, epsA,
+        %                                                   nElements] )
         frame_beams;
 
         % frame nodes index vector for the discretized system
@@ -121,8 +128,9 @@ classdef c_frame_def < handle
         %   p_beams - specification vectors for the beams. each row
         %             contains a beam spec-vector with the following
         %             data:
-        %             [ startNodeID endNodeID rhoA EA EI elDensity ]
-        function s = addBeam( s, p_beams )
+        %             [ startNodeID endNodeID rhoA EA EI dp epsA
+        %                                                    elDensity ]
+        function s = addBeamPiezo( s, p_beams )
 
             % calculate number of elements on each beam via the
             % specified element density
@@ -143,6 +151,25 @@ classdef c_frame_def < handle
 
 
             s.frame_beams = [s.frame_beams ; p_beams];
+
+        end
+
+        % ADD BEAM(S) TO THE FRAME STRUCTURE W/O PIEZOELECTRIC COUPLING
+        %
+        % Inputs:
+        %   p_beams - specification vectors for the beams. each row
+        %             contains a beam spec-vector with the following
+        %             data:
+        %             [ startNodeID endNodeID rhoA EA EI elDensity ]
+        function s = addBeam( s, p_beams )
+
+            % get number of beams
+            nb = size(p_beams,1);
+
+            % insert zero valued placeholder values for the
+            % piezoelectric properties and call addBeamPiezo
+            s.addBeamPiezo([p_beams(:,1:end-1) zeros(nb,2)           ...
+                                                       p_beams(:,end)]);
 
         end
 
@@ -178,6 +205,8 @@ classdef c_frame_def < handle
                 beamRhoA = beam(s.IDXB_RHOA);
                 beamEA = beam(s.IDXB_EA);
                 beamEI = beam(s.IDXB_EI);
+                beamDp = beam(s.IDXB_DP);
+                beamEpsA = beam(s.IDXB_EPSA);
                 
                 % start and end node coordinates
                 xStart = s.frame_nodes(beamFirstNode,1);
@@ -198,8 +227,8 @@ classdef c_frame_def < handle
 
                 % insert beam elements with constant properties between
                 % these nodes
-                sys_fem.addElBeamConst(nodeIdx, l/beamNEl, a,       ...
-                                       beamRhoA, beamEA, beamEI);
+                sys_fem.addElBeamPiezoConst(nodeIdx, l/beamNEl, a,   ...
+                            beamRhoA, beamEA, beamEI, beamDp, beamEpsA);
 
                 % update frame nodes indices
                 s.frame_nodes_idx([beamFirstNode beamLastNode]) = ...

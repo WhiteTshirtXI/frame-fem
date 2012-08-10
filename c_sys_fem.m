@@ -25,24 +25,28 @@ classdef c_sys_fem < handle
 %    eigRecalc  - recalculation of eigenvalues required
 %
 % Methods :
-%    c_sys_fem        - constructor
-%    sysDOF           - return overall system degrees of freedom
-%    addNodes         - add nodes
-%    addElBeam        - add beam element(s)
-%    addElBeamComst   - add beam elements with constant properties
-%                       between nodes
+%    c_sys_fem           - constructor
+%    sysDOF              - return overall system degrees of freedom
+%    addNodes            - add nodes
+%    addElBeamPiezo      - add beam element(s)
+%    addElBeam           - add beam element(s) w/o piezoelectric
+%                          coupling
+%    addElBeamPiezoConst - add beam elements with constant properties
+%                          between nodes
+%    addElBeamConst      - add beam elements with constant properties
+%                          between nodes w/o piezoelectric coupling
 %
-%    harmonicAnalysis - do a harmonic analysis in frequency domain
-%    eigCalc          - calculate eigenvalues and eigenvectors
-%    eigOmega         - calculate angular eigenfrequencies
-%    eigF             - calculate eigenfrequencies
-%    maxModes         - maximum number of eigenmodes
+%    harmonicAnalysis    - do a harmonic analysis in frequency domain
+%    eigCalc             - calculate eigenvalues and eigenvectors
+%    eigOmega            - calculate angular eigenfrequencies
+%    eigF                - calculate eigenfrequencies
+%    maxModes            - maximum number of eigenmodes
 %
-%    addNodeBC        - add nodal boundary condition
-%    addNodeBC_inf    - add nodal boundary condition for infinite
-%                       elements
+%    addNodeBC           - add nodal boundary condition
+%    addNodeBC_inf       - add nodal boundary condition for infinite
+%                          elements
 %
-%    addNodeSources   - add nodal sources
+%    addNodeSources      - add nodal sources
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -50,7 +54,7 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-08-10 11:17 CEST
+% Last Modified : 2012-08-10 13:58 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -136,6 +140,29 @@ classdef c_sys_fem < handle
         %   p_rhoA - mass loading
         %   p_EA   - axial stiffness
         %   p_EI   - bending stiffness
+        %   p_dp   - piezoelectric coupling factor
+        %   p_epsA - area-permittivity constant 
+        function s = addElBeamPiezo(s, p_n1, p_n2, p_l, p_a,         ...
+                                       p_rhoA, p_EA, p_EI, p_dp, p_epsA)
+
+            s.el_beams.addBeamPiezo(p_n1, p_n2, p_l, p_a, p_rhoA,    ...
+                                              p_EA, p_EI, p_dp, p_epsA);
+            
+            % a recalculation of eigenvalues is required
+            s.eigRecalc = true;
+
+        end
+
+        % ADD BEAM ELEMENT(S) W/O PIEZOELECTRIC COUPLING
+        %
+        % Inputs:
+        %   p_n1   - first node index
+        %   p_n2   - second node index
+        %   p_l    - element length
+        %   p_a    - element orientation angle 
+        %   p_rhoA - mass loading
+        %   p_EA   - axial stiffness
+        %   p_EI   - bending stiffness
         function s = addElBeam(s, p_n1, p_n2, p_l, p_a,        ...
                                                      p_rhoA, p_EA, p_EI)
 
@@ -148,6 +175,30 @@ classdef c_sys_fem < handle
         end
 
         % ADD BEAM ELEMENTS WITH CONSTANT PROPERTIES BETWEEN NODES
+        %
+        % Inputs:
+        %   p_n1   - first node index
+        %   p_n2   - second node index
+        %   p_l    - element length
+        %   p_a    - element orientation angle 
+        %   p_rhoA - mass loading
+        %   p_EA   - axial stiffness
+        %   p_EI   - bending stiffness
+        %   p_dp   - piezoelectric coupling factor
+        %   p_epsA - area-permittivity constant 
+        function s = addElBeamPiezoConst(s, p_n, p_l, p_a, p_rhoA,   ...
+                                               p_EA, p_EI, p_dp, p_epsA)
+
+            s.el_beams.addBeamPiezoConst(p_n, p_l, p_a, p_rhoA,      ...
+                                              p_EA, p_EI, p_dp, p_epsA);
+            
+            % a recalculation of eigenvalues is required
+            s.eigRecalc = true;
+
+        end
+
+        % ADD BEAM ELEMENTS WITH CONSTANT PROPERTIES BETWEEN NODES W/O
+        % PIEZOELECTRIC COUPLING
         %
         % Inputs:
         %   p_n    - node indices
