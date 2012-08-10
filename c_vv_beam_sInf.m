@@ -65,7 +65,7 @@ classdef c_vv_beam_sInf < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-07-19 10:46 CEST
-% Last Modified : 2012-07-25 10:15 CEST
+% Last Modified : 2012-08-10 14:28 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -383,7 +383,7 @@ classdef c_vv_beam_sInf < handle
 
                 % calculate driving point mobilities (driving point =
                 % first node)
-                dpm(:,jf) = v(:,1);
+                dpm(:,jf) = v(1:3,1);
 
             end
 
