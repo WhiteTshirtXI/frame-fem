@@ -123,7 +123,7 @@ classdef c_prj_dframe < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-06-06 16:02 CEST
-% Last Modified : 2012-07-03 14:08 CEST
+% Last Modified : 2012-08-10 09:39 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -440,7 +440,7 @@ classdef c_prj_dframe < handle
             P_p = mean(P_p);
 
             % extract the node displacement amplitude at the force node
-            u_f = u(:,s.nIdxD(s.fNodes));
+            u_f = u(1:3,s.nIdxD(s.fNodes));
 
             % calculate power at force node
             P_f = sum(real(0.5*s.f.*conj(1i*s.omega*u_f)));

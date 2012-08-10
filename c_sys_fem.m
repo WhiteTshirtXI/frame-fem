@@ -25,24 +25,24 @@ classdef c_sys_fem < handle
 %    eigRecalc  - recalculation of eigenvalues required
 %
 % Methods :
-%    c_sys_fem       - constructor
-%    sysDOF          - return overall system degrees of freedom
-%    addNodes        - add nodes
-%    addElBeam       - add beam element(s)
-%    addElBeamComst  - add beam elements with constant properties
-%                      between nodes
+%    c_sys_fem        - constructor
+%    sysDOF           - return overall system degrees of freedom
+%    addNodes         - add nodes
+%    addElBeam        - add beam element(s)
+%    addElBeamComst   - add beam elements with constant properties
+%                       between nodes
 %
 %    harmonicAnalysis - do a harmonic analysis in frequency domain
-%    eigCalc         - calculate eigenvalues and eigenvectors
-%    eigOmega        - calculate angular eigenfrequencies
-%    eigF            - calculate eigenfrequencies
-%    maxModes        - maximum number of eigenmodes
+%    eigCalc          - calculate eigenvalues and eigenvectors
+%    eigOmega         - calculate angular eigenfrequencies
+%    eigF             - calculate eigenfrequencies
+%    maxModes         - maximum number of eigenmodes
 %
-%    addNodeBC       - add nodal boundary condition
-%    addNodeBC_inf   - add nodal boundary condition for infinite
-%                      elements
+%    addNodeBC        - add nodal boundary condition
+%    addNodeBC_inf    - add nodal boundary condition for infinite
+%                       elements
 %
-%    addNodeForces   - add nodal forces and moments
+%    addNodeSources   - add nodal sources
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -50,16 +50,16 @@ classdef c_sys_fem < handle
 %                 felix.langfeldt@haw-hamburg.de
 %
 % Creation Date : 2012-05-18 12:50 CEST
-% Last Modified : 2012-07-31 09:40 CEST
+% Last Modified : 2012-08-10 09:46 CEST
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % PRIVATE PROPERTIES %
     properties (SetAccess = private)
         % number of DOFs per node
-        % (equals 3, because, currently, only beam-truss-like elements
-        % are supported)
-        NDOF = 3;
+        % (equals 4, because, currently, only beam-truss-like elements
+        % with piezo-electric properties are supported)
+        NDOF = 4;
 
         % nodes class
         nodes;
@@ -177,7 +177,7 @@ classdef c_sys_fem < handle
             idx = s.nodes.idxFreeDOFs();
 
             % pre-allocate displacement vector
-            u = zeros(3,s.nodes.iln);
+            u = zeros(s.NDOF,s.nodes.iln);
 
             % assemble system matrices
             [MSys,KSys] = s.el_beams.mSys();
@@ -188,13 +188,18 @@ classdef c_sys_fem < handle
             KSys = KSys + diag(reshape(s.bc_inf(:,1:2:end).',1,[]));
             DSys = DSys + diag(reshape(s.bc_inf(:,2:2:end).',1,[]));
 
+            % update index vector to also account for zero rows and
+            % columns in the system mass and stiffness matrices (e.g.
+            % beams with E*A=0) to avoid singular matrices
+            idx = idx & any(MSys,2) & any(KSys,2); 
+
             % calculate inverse transfer matrix
             % (for a system of linear equations Ax=b this equals the
             % matrix A!)
             HSysI = (-p_om^2*MSys+1j*p_om*DSys+KSys);
 
             % calculate complex displacement amplitudes via x=(A^-1)b
-            u(idx) = HSysI(idx,idx)\s.nodes.f(idx);
+            u(idx) = HSysI(idx,idx)\s.nodes.s(idx);
 
         end
 
@@ -229,6 +234,11 @@ classdef c_sys_fem < handle
 
             % assemble system matrices
             [MSys,KSys] = s.el_beams.mSys();
+
+            % update index vector to also account for zero rows and
+            % columns in the system mass and stiffness matrices (e.g.
+            % beams with E*A=0) to avoid singular matrices
+            idx = idx & any(MSys,2) & any(KSys,2); 
 
             % calculate eigenvalues and eigenvectors corresponding to
             % the lowest eigenfrequencies
@@ -323,15 +333,15 @@ classdef c_sys_fem < handle
 
         end
 
-        % ADD NODAL FORCES AND MOMENTS
+        % ADD NODAL SOURCES 
         %
         % Inputs:
-        %   p_i_node - node index the force is acting on
-        %   p_f      - forces for each DOF
-        %              [f_x f_z m_xz]
-        function s = addNodeForces(s, p_i_node, p_f)
+        %   p_i_node - node index the sources are applied to 
+        %   p_s      - sources for each DOF
+        %              [f_x f_z m_xz sigma]
+        function s = addNodeSources(s, p_i_node, p_s)
 
-            s.nodes.setForce( p_i_node, p_f.' );
+            s.nodes.setSource( p_i_node, p_s.' );
 
         end
 
